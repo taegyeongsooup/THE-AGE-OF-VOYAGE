@@ -1,0 +1,2939 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>대항해 시대: 운명을 건 항해</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Noto+Sans+KR:wght@300;400;700;900&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* ============ 양피지 역사 테마 ============ */
+        :root {
+            --parch-bg: #f4edd8;
+            --parch-dark: #2c1a04;
+            --parch-mid: #7a5c2e;
+            --parch-border: #5c3d11;
+            --parch-accent: #8b1a1a;
+            --parch-gold: #c8960c;
+            --parch-ink: #1a0f00;
+            --parch-panel: rgba(44,26,4,0.82);
+            --parch-panel-border: rgba(139,90,43,0.45);
+        }
+        body {
+            margin: 0; padding: 0;
+            background: #0d0700;
+        }
+        #scale-root {
+            background:
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E"),
+                radial-gradient(ellipse at 20% 20%, #3d2208 0%, #1a0f00 40%, #0d0700 100%);
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        @media (max-width: 1023px) {
+            body { overflow-y: auto; height: auto; }
+            #scale-root { font-size: 13px; overflow-y: auto; height: auto !important; }
+        }
+        .header-title {
+            font-family: 'Cinzel', 'Noto Sans KR', serif;
+        }
+        /* 투자 중인(보유 중인) 선박 카드 - 테두리 발광 효과 */
+        @keyframes owned-glow {
+            0%, 100% { box-shadow: 0 0 6px 1px rgba(200, 150, 12, 0.55), inset 0 0 12px rgba(200, 150, 12, 0.08); }
+            50% { box-shadow: 0 0 18px 5px rgba(200, 150, 12, 0.90), inset 0 0 20px rgba(200, 150, 12, 0.16); }
+        }
+        .ship-card.is-owned {
+            border-color: rgba(200, 150, 12, 0.90) !important;
+            animation: owned-glow 2.2s ease-in-out infinite;
+        }
+        /* 손익 컬러 규칙: 이득(빨강) / 손해(파랑) - 사용자 요청 반영 */
+        .pnl-profit { color: #f87171 !important; }
+        .pnl-loss { color: #60a5fa !important; }
+        .pnl-flat { color: #cbd5e1 !important; }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a0f00;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #5c3d11;
+            border-radius: 2px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #c8960c;
+        }
+        /* Card hover glow */
+        .ship-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .ship-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -4px rgba(200, 150, 12, 0.30);
+        }
+        /* Custom animations */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        .animate-float {
+            animation: float 4s ease-in-out infinite;
+        }
+        @keyframes wave {
+            0% { transform: translateX(0) translateZ(0) scaleY(1); }
+            50% { transform: translateX(-25%) translateZ(0) scaleY(0.8); }
+            100% { transform: translateX(-50%) translateZ(0) scaleY(1); }
+        }
+        .ocean-wave {
+            animation: wave 12s linear infinite;
+        }
+        /* Sinking/Success anims */
+        @keyframes sink {
+            0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+            50% { transform: translateY(20px) rotate(15deg); opacity: 0.8; }
+            100% { transform: translateY(150px) rotate(45deg); opacity: 0; }
+        }
+        .animate-sink {
+            animation: sink 3s forwards ease-in;
+        }
+        @keyframes sail-success {
+            0% { transform: translateX(0) scale(1); }
+            100% { transform: translateX(400px) scale(1.1); opacity: 0; }
+        }
+        .animate-sail-success {
+            animation: sail-success 3.5s forwards ease-in-out;
+        }
+
+        /* ============ 양피지 테마 컴포넌트 ============ */
+        header {
+            background: linear-gradient(135deg, rgba(28,14,2,0.97) 0%, rgba(44,26,4,0.95) 100%) !important;
+            border-bottom-color: rgba(139,90,43,0.5) !important;
+            backdrop-filter: blur(12px);
+        }
+        #screen-lobby, #screen-game, #screen-voyage, #screen-results {
+            /* 게임 전반 통일 */
+        }
+        /* 패널/카드 배경 - 가죽+양피지 질감 */
+        .parch-panel {
+            background: linear-gradient(145deg, rgba(44,26,4,0.90), rgba(28,14,2,0.88));
+            border: 1px solid rgba(139,90,43,0.40);
+            border-radius: 14px;
+        }
+        /* 선박 카드 배경 - 아이보리 양피지 */
+        .ship-card {
+            background: linear-gradient(145deg, #f5edd6, #ede0c0) !important;
+            color: #1a0f00 !important;
+        }
+        .ship-card .text-slate-100, .ship-card .text-slate-200,
+        .ship-card .text-slate-300 { color: #2c1a04 !important; }
+        .ship-card .text-slate-400, .ship-card .text-slate-500 { color: #7a5c2e !important; }
+        .ship-card .bg-slate-950\/60, .ship-card .bg-slate-950\/40 {
+            background: rgba(44,26,4,0.08) !important;
+        }
+        .ship-card .bg-slate-900, .ship-card .bg-slate-950 {
+            background: rgba(44,26,4,0.12) !important;
+        }
+        .ship-card .border-slate-800\/50, .ship-card .border-slate-800\/80,
+        .ship-card .border-slate-900\/80 {
+            border-color: rgba(139,90,43,0.25) !important;
+        }
+        .ship-card .border-slate-700 { border-color: rgba(139,90,43,0.30) !important; }
+        .ship-card .text-teal-400 { color: #0f766e !important; }
+        .ship-card .text-amber-400 { color: #b45309 !important; }
+        .ship-card .text-blue-300 { color: #1d4ed8 !important; }
+        .ship-card .pnl-profit { color: #dc2626 !important; }
+        .ship-card .pnl-loss { color: #1d4ed8 !important; }
+        .ship-card .pnl-flat { color: #57534e !important; }
+        /* 매수 버튼 아이보리 카드 위 */
+        .ship-card button { filter: brightness(1.05); }
+        /* 텍스트 색상 통일 */
+        .text-slate-100 { color: #e8d5a3 !important; }
+        .text-slate-200 { color: #e0c88a !important; }
+        .text-slate-300 { color: #c9a96e !important; }
+        .text-slate-400 { color: #9e7a4a !important; }
+        .text-slate-500 { color: #7a5c2e !important; }
+        /* 보더 색상 조정 */
+        .border-slate-800 { border-color: rgba(92,61,17,0.5) !important; }
+        .border-slate-800\/80 { border-color: rgba(92,61,17,0.4) !important; }
+        /* 배경 패널 */
+        .bg-slate-950\/85, .bg-slate-950\/90, .bg-slate-950\/70 {
+            background: linear-gradient(145deg, rgba(28,12,2,0.92), rgba(40,22,4,0.88)) !important;
+        }
+        .bg-slate-900\/70 { background: rgba(35,18,3,0.75) !important; }
+        .bg-slate-900\/60 { background: rgba(35,18,3,0.65) !important; }
+        .bg-slate-900\/50 { background: rgba(35,18,3,0.55) !important; }
+        .bg-slate-900\/30 { background: rgba(35,18,3,0.35) !important; }
+        .bg-slate-900 { background: rgba(28,12,2,0.90) !important; }
+        .bg-slate-950 { background: rgba(20,8,0,0.95) !important; }
+        /* 테두리 */
+        .border-slate-700 { border-color: rgba(139,90,43,0.45) !important; }
+        .border-slate-700\/60 { border-color: rgba(139,90,43,0.30) !important; }
+        .border-slate-800\/60 { border-color: rgba(92,61,17,0.35) !important; }
+        /* 헤더 타이틀 */
+        .header-title {
+            font-family: 'Cinzel', 'Noto Sans KR', serif;
+            text-shadow: 0 0 30px rgba(200,150,12,0.3);
+        }
+        /* 로비 나침반 배경 */
+        #screen-lobby .bg-slate-950 { background: rgba(20,8,0,0.90) !important; }
+        /* 투자 탭 스타일 */
+        .portfolio-tab-btn {
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            border: 1px solid rgba(139,90,43,0.35);
+            background: rgba(28,12,2,0.7);
+            color: #9e7a4a;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .portfolio-tab-btn.active {
+            background: rgba(200,150,12,0.20);
+            border-color: rgba(200,150,12,0.55);
+            color: #e8d5a3;
+        }
+        /* 예측 카드 hover tooltip */
+        .forecast-card-wrap {
+            position: relative;
+        }
+        .forecast-tooltip {
+            display: none;
+            position: absolute;
+            z-index: 60;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 220px;
+            background: rgba(28,12,2,0.97);
+            border: 1px solid rgba(200,150,12,0.45);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 11px;
+            color: #c9a96e;
+            line-height: 1.55;
+            pointer-events: none;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+        }
+        .forecast-card-wrap:hover .forecast-tooltip {
+            display: block;
+        }
+        /* input 양피지 스타일 */
+        input[type="text"], input[type="number"], input[type="password"] {
+            background: rgba(20,8,0,0.85) !important;
+            border-color: rgba(92,61,17,0.55) !important;
+            color: #e8d5a3 !important;
+        }
+        input[type="text"]:focus, input[type="number"]:focus, input[type="password"]:focus {
+            border-color: rgba(200,150,12,0.7) !important;
+            outline: none;
+        }
+        input::placeholder { color: #5c3d11 !important; }
+        /* 아이보리 패널 내부 텍스트 색상 */
+        [style*="#f5edd6"] .text-slate-400,
+        [style*="#f5edd6"] .text-slate-500 { color: #7a5c2e !important; }
+        [style*="#f5edd6"] .text-slate-200,
+        [style*="#f5edd6"] .text-slate-300 { color: #2c1a04 !important; }
+        [style*="#f5edd6"] .text-white { color: #1a0f00 !important; }
+        [style*="#f5edd6"] .text-emerald-400 { color: #15803d !important; }
+        [style*="#f5edd6"] .text-blue-400 { color: #1d4ed8 !important; }
+        [style*="#f5edd6"] .text-amber-400 { color: #b45309 !important; }
+        [style*="#f5edd6"] .border-slate-800\/80 { border-color: rgba(139,90,43,0.30) !important; }
+        /* 뉴스 콘솔 패널 */
+        [style*="#f5edd6"] #news-title { color: #1a0f00 !important; }
+        [style*="#f5edd6"] #news-desc { color: #3d2208 !important; }
+        [style*="#f5edd6"] .bg-slate-800 { background: rgba(240,225,190,0.6) !important; }
+        [style*="#f5edd6"] .bg-slate-900 { background: rgba(240,225,190,0.5) !important; }
+        [style*="#f5edd6"] .bg-slate-950\/40 { background: rgba(44,26,4,0.08) !important; }
+        [style*="#f5edd6"] .border-slate-800 { border-color: rgba(139,90,43,0.30) !important; }
+        /* 전액매도/라운드 버튼 아이보리 패널 안 */
+        [style*="#f5edd6"] #btn-next-round { 
+            background: linear-gradient(135deg,#7a4a1a,#a06820) !important;
+            color: #f5edd6 !important;
+        }
+        /* 결과 화면 */
+        #screen-results .bg-slate-950\/90 {
+            background: linear-gradient(145deg, rgba(28,12,2,0.96), rgba(40,22,4,0.93)) !important;
+        }
+        #screen-results .border-slate-800 { border-color: rgba(139,90,43,0.45) !important; }
+        /* 항해 화면 */
+        #screen-voyage .bg-slate-950\/90 { background: rgba(20,8,0,0.95) !important; }
+        /* 명예의전당 */
+        #hall-of-fame-list .bg-slate-900\/60 { background: rgba(28,12,2,0.65) !important; }
+
+        /* ============ 반응형 / 모바일 최적화 ============ */
+
+        /* 전체 앱 */
+        #app-root {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* 데스크탑: 고정 높이 레이아웃 */
+        @media (min-width: 1024px) {
+
+            main { overflow: hidden !important; }
+            #screen-game { height: 100%; }
+            #left-panel { height: 100%; }
+            #right-panel { height: 100%; }
+            #ships-grid { grid-template-rows: repeat(2, 1fr) !important; height: 100%; }
+            #ships-grid > div { height: 100%; }
+        }
+
+        /* 창 크기 대응 - JS scale 방식으로 처리 (CSS zoom 제거) */
+
+        /* 모바일/태블릿: 세로 스크롤 */
+        @media (max-width: 1023px) {
+            body, #scale-root { height: auto !important; overflow-y: auto !important; }
+            #screen-game { grid-template-columns: 1fr !important; gap: 12px; }
+            main { overflow: visible !important; height: auto !important; }
+        }
+
+        /* 선박 카드 모바일 */
+        @media (max-width: 640px) {
+            .ship-card { min-height: 260px !important; font-size: 11px; }
+            .ship-card h4 { font-size: 11px !important; }
+        }
+
+        /* 버튼 터치 영역 */
+        @media (max-width: 1023px) {
+            .ship-card button { min-height: 32px; font-size: 11px; }
+        }
+
+        /* 로비 화면 */
+        @media (max-width: 1023px) {
+            #screen-lobby { padding: 12px 12px; max-height: none !important; overflow-y: auto; }
+        }
+
+        /* 결과 화면 */
+        @media (max-width: 1023px) {
+            #screen-results { max-height: none !important; padding: 12px; }
+        }
+
+        /* 헤더 */
+        @media (max-width: 640px) {
+            #main-header { padding: 8px 12px; height: auto; min-height: 52px; }
+            #main-header .header-title { font-size: 13px; }
+        }
+
+        /* 신문 모달 */
+        @media (max-width: 640px) {
+            #newspaper-modal > div { padding: 12px; font-size: 13px; }
+            #newspaper-modal h2 { font-size: 16px; }
+            #newspaper-modal h3 { font-size: 15px; }
+            #newspaper-modal p { font-size: 12px; }
+        }
+
+        /* 예측 카드 */
+        @media (max-width: 640px) {
+            .forecast-tooltip { width: 160px; font-size: 10px; }
+        }
+
+        /* 포트폴리오 표 */
+        @media (max-width: 640px) {
+            #live-portfolio-table-wrap td, #live-portfolio-table-wrap th { padding: 4px 3px; font-size: 9px; }
+        }
+
+        /* 좌측 패널 패딩 */
+        @media (max-width: 1023px) {
+            #left-panel > div { padding: 10px; }
+        }
+
+        /* 텍스트 스케일 */
+        @media (max-width: 640px) {
+            .text-lg, .text-xl { font-size: 1rem !important; }
+            .text-2xl { font-size: 1.2rem !important; }
+            .text-3xl { font-size: 1.4rem !important; }
+        }
+
+        /* ============ 창 크기 대응: vh 기반 자동 축소 ============ */
+        @media (min-width: 1024px) {
+            /* 헤더 높이 축소 */
+            #main-header {
+                height: clamp(44px, 6.5vh, 65px) !important;
+                padding-top: clamp(4px, 0.8vh, 12px) !important;
+                padding-bottom: clamp(4px, 0.8vh, 12px) !important;
+            }
+            /* main 영역 패딩 축소 */
+            main {
+                padding: clamp(4px, 0.8vh, 12px) clamp(8px, 1vw, 16px) !important;
+                gap: clamp(4px, 0.6vh, 12px) !important;
+            }
+            /* 게임 그리드 gap 축소 */
+            #screen-game {
+                gap: clamp(4px, 0.6vh, 12px) !important;
+            }
+            /* 선박 그리드 gap 축소 */
+            #ships-grid {
+                gap: clamp(3px, 0.5vh, 8px) !important;
+            }
+            /* 왼쪽 패널 gap 축소 */
+            #left-panel {
+                gap: clamp(3px, 0.5vh, 10px) !important;
+            }
+            /* 선박 카드 padding 축소 */
+            .ship-card {
+                padding: clamp(4px, 0.7vh, 10px) !important;
+                min-height: 0 !important;
+            }
+            /* 카드 내부 mb 간격 전체 축소 */
+            .ship-card .mb-1 { margin-bottom: clamp(1px, 0.2vh, 4px) !important; }
+            .ship-card .mb-1\.5 { margin-bottom: clamp(2px, 0.3vh, 6px) !important; }
+            .ship-card .py-1 { padding-top: clamp(1px, 0.2vh, 4px) !important; padding-bottom: clamp(1px, 0.2vh, 4px) !important; }
+            /* 선장/상품 아바타 크기 */
+            .ship-card .w-7 { width: clamp(20px, 2.8vh, 28px) !important; height: clamp(20px, 2.8vh, 28px) !important; }
+            /* 그래프 높이 */
+            .ship-card svg { height: clamp(28px, 4.5vh, 52px) !important; }
+            /* 버튼 높이 */
+            .ship-card button { padding-top: clamp(3px, 0.5vh, 6px) !important; padding-bottom: clamp(3px, 0.5vh, 6px) !important; min-height: 0 !important; }
+            /* 왼쪽 패널 padding 축소 */
+            #left-panel > div { padding: clamp(6px, 1vh, 12px) !important; }
+        }
+    </style>
+</head>
+<body style="margin:0;padding:0;overflow:hidden;">
+<div id="scale-root" class="text-slate-100 flex flex-col" style="min-height:100vh;">
+
+    <!-- Audio Feedback Controller -->
+    <script>
+        let audioCtx = null;
+        function playSound(type) {
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
+                    gain.gain.setValueAtTime(0.05, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                    osc.start(now);
+                    osc.stop(now + 0.1);
+                } else if (type === 'buy') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now); // C5
+                    osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                    osc.frequency.setValueAtTime(783.99, now + 0.16); // G5
+                    gain.gain.setValueAtTime(0.07, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'sell') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(783.99, now); // G5
+                    osc.frequency.setValueAtTime(659.25, now + 0.08); // E5
+                    osc.frequency.setValueAtTime(523.25, now + 0.16); // C5
+                    gain.gain.setValueAtTime(0.07, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'event') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.linearRampToValueAtTime(300, now + 0.4);
+                    gain.gain.setValueAtTime(0.08, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                } else if (type === 'success') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.exponentialRampToValueAtTime(1046.50, now + 0.5);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+                    osc.start(now);
+                    osc.stop(now + 0.6);
+                } else if (type === 'fail') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.linearRampToValueAtTime(110, now + 0.6);
+                    gain.gain.setValueAtTime(0.12, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.7);
+                    osc.start(now);
+                    osc.stop(now + 0.7);
+                }
+            } catch (e) {
+                console.log("Audio context blocked or unsupported:", e);
+            }
+        }
+    </script>
+
+    <!-- App Header -->
+    <header id="main-header" class="border-b border-slate-800/80 backdrop-blur-md px-6 py-3 h-[65px] flex items-center shrink-0 z-30" style="background: linear-gradient(135deg, rgba(28,14,2,0.97), rgba(44,26,4,0.95)); display:none;">
+        <div class="max-w-7xl w-full mx-auto flex justify-between items-center gap-4">
+            <div class="flex items-center gap-2.5">
+                <div class="p-2 rounded-xl shadow-lg text-amber-200" style="background: linear-gradient(135deg, #8b4513, #c8960c); box-shadow: 0 4px 12px rgba(200,150,12,0.25);">
+                    <i class="fa-solid fa-ship text-lg animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="header-title text-lg font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400">
+                        THE AGE OF VOYAGE
+                    </h1>
+                    <p class="text-[10px] uppercase tracking-widest font-semibold" style="color:#9e7a4a;">신항로 개척, 운명을 건 항해에 투자하라!</p>
+                </div>
+            </div>
+            
+            <!-- Dashboard Stats -->
+            <div class="flex items-center gap-3 text-xs sm:text-sm">
+                <div class="rounded-lg px-3 py-1 flex items-center gap-1.5" style="background:rgba(28,12,2,0.85);border:1px solid rgba(139,90,43,0.5);">
+                    <span class="text-slate-400 font-medium">현재 자산:</span>
+                    <span class="text-emerald-400 font-bold" id="dashboard-total-assets">1,000</span>
+                    <span class="text-[10px] text-slate-500 font-bold">레알</span>
+                </div>
+                <div class="rounded-lg px-3 py-1 flex items-center gap-1.5" style="background:rgba(28,12,2,0.85);border:1px solid rgba(139,90,43,0.5);">
+                    <span class="text-slate-400 font-medium">진행 상황:</span>
+                    <span class="text-blue-400 font-bold" id="dashboard-round">출항 준비 단계</span>
+                </div>
+                <button onclick="quitGame()" style="background:rgba(127,29,29,0.75);color:#fca5a5;border:1px solid rgba(153,27,27,0.5);font-size:11px;" class="px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 hover:brightness-110 active:scale-95 transition shrink-0">
+                    <i class="fa-solid fa-flag text-[10px]"></i> 게임 포기하기
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Display Section -->
+    <main class="flex-grow max-w-[1550px] w-full mx-auto p-3 flex flex-col justify-center relative min-h-0 overflow-hidden">
+
+        <!-- Custom Alert Container -->
+        <div id="game-alert" class="hidden fixed top-24 left-1/2 transform -translate-x-1/2 z-50 bg-slate-900 border-2 border-amber-500/70 text-amber-200 px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 backdrop-blur-lg animate-bounce">
+            <i class="fa-solid fa-triangle-exclamation text-amber-500 text-lg"></i>
+            <span id="game-alert-text" class="font-bold text-sm">경고 메세지 공간</span>
+        </div>
+
+        <!-- SCREEN 1: LOBBY / START SCREEN (메인 대기실 화면 최초 출력) -->
+        <section id="screen-lobby" class="w-full max-w-4xl mx-auto flex flex-col items-center justify-center text-center overflow-y-auto" style="max-height:100vh; padding: 8px 0;">
+            <div class="relative mb-2 animate-float">
+                <div class="absolute -inset-1 rounded-full opacity-75 blur-xl" style="background: radial-gradient(circle, #c8960c, #8b4513);"></div>
+                <div class="relative bg-slate-950 p-5 rounded-full border border-slate-800">
+                    <i class="fa-solid fa-compass text-3xl lg:text-4xl text-amber-400"></i>
+                </div>
+            </div>
+            
+            <h2 class="header-title text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text mb-2 tracking-tight" style="background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                대항해 시대: 운명을 건 항해
+            </h2>
+            <p class="text-slate-300 max-w-2xl text-sm sm:text-base mb-3 leading-relaxed px-4">
+                16세기 대항해 시대, 유럽의 야심 찬 선장들이 미지의 신대륙과 인도를 향해 닻을 올립니다.<br>
+                <strong class="text-amber-400">1,000 레알</strong>을 쥔 스페인의 거상 투자자가 되어, 8척의 탐험 선단에 나누어 투자하십시오.<br>
+                변동하는 상황 속에서 최대의 부를 창조하고 명예를 드높이시길!
+            </p>
+
+            <!-- Player Identity Form (반/번호/이름 입력) -->
+            <div class="w-full max-w-xl mb-3 px-4">
+                <div class="rounded-2xl p-4 sm:p-5 shadow-xl" style="background:linear-gradient(145deg,#f5edd6,#ede0c0); border:2px solid rgba(139,90,43,0.55); color:#1a0f00;">
+                    <h3 class="font-bold text-sm mb-3 flex items-center justify-center gap-2" style="color:#7a4a1a;">
+                        <i class="fa-solid fa-id-card"></i> 승선 명부 작성 (칭호 기록용 필수 입력)
+                    </h3>
+                    <div class="grid grid-cols-3 gap-2.5">
+                        <div class="text-left">
+                            <label class="text-[12px] font-semibold block mb-1" style="color:#5c3d11;">반</label>
+                            <input type="number" id="input-player-class" min="1" placeholder="예: 3" class="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-100 text-sm font-bold focus:outline-none focus:border-amber-500 placeholder:text-slate-600">
+                        </div>
+                        <div class="text-left">
+                            <label class="text-[12px] font-semibold block mb-1" style="color:#5c3d11;">번호</label>
+                            <input type="number" id="input-player-number" min="1" placeholder="예: 12" class="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-100 text-sm font-bold focus:outline-none focus:border-amber-500 placeholder:text-slate-600">
+                        </div>
+                        <div class="text-left">
+                            <label class="text-[12px] font-semibold block mb-1" style="color:#5c3d11;">이름</label>
+                            <input type="text" id="input-player-name" placeholder="예: 홍길동" class="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-100 text-sm font-bold focus:outline-none focus:border-amber-500 placeholder:text-slate-600">
+                        </div>
+                    </div>
+                    <!-- 비밀번호 -->
+                    <div class="mt-2.5 text-left">
+                        <label class="text-[12px] text-slate-400 font-semibold block mb-1"><i class="fa-solid fa-lock text-amber-500"></i> 개인 비밀번호 <span class="text-slate-500 font-normal">(최초 설정 시 기억해두세요. 다음 플레이 시 동일 비밀번호 필요)</span></label>
+                        <input type="password" id="input-player-pw" placeholder="비밀번호 4자리 이상" class="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-100 text-sm font-bold focus:outline-none focus:border-amber-500 placeholder:text-slate-600">
+                        <p id="pw-hint" class="text-[11px] text-slate-500 mt-1 hidden"></p>
+                    </div>
+                    <p id="player-form-error" class="hidden text-rose-400 text-[12px] font-bold mt-2"><i class="fa-solid fa-circle-exclamation"></i> 반, 번호, 이름, 비밀번호를 모두 입력해야 출항할 수 있습니다.</p>
+                </div>
+            </div>
+
+            <!-- 3단계 설명 제거됨 -->
+
+            <button onclick="startGame()" class="px-8 py-3 bg-gradient-to-r from-amber-700 via-yellow-700 to-amber-600 rounded-xl font-bold text-base text-amber-100 shadow-xl shadow-amber-900/30 hover:scale-105 transition-all duration-300 active:scale-95 flex items-center gap-2 mb-3">
+                <i class="fa-solid fa-ship"></i> 게임 시작 및 초기 투자하러 가기
+            </button>
+
+            <!-- 칭호 수집 명예의 전당 (Top 10) -->
+            <div class="w-full max-w-3xl px-4">
+                <div class="rounded-2xl p-4" style="background:linear-gradient(145deg,#f5edd6,#ede0c0); border:1px solid rgba(139,90,43,0.45);">
+                    <div class="flex items-center justify-between mb-2.5">
+                        <h3 class="font-bold text-sm flex items-center gap-2" style="color:#2c1a04;">
+                            <i class="fa-solid fa-trophy text-amber-400"></i> 명예의 전당 (TOP 10)
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <button onclick="showMyTitles()" class="text-[12px] text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 border border-amber-700/40 rounded-lg px-2 py-0.5">
+                                <i class="fa-solid fa-medal"></i> 나의 칭호 보기
+                            </button>
+                            <button onclick="loadHallOfFame()" class="text-[12px] text-slate-400 hover:text-amber-400 font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-arrows-rotate" id="hof-refresh-icon"></i> 갱신
+                            </button>
+                        </div>
+                    </div>
+                    <div id="hall-of-fame-list" class="space-y-1 max-h-[120px] overflow-y-auto text-left">
+                        <p class="text-slate-500 text-[12px] text-center py-3">기록을 불러오는 중입니다... (스프레드시트 연동이 설정되지 않았다면 표시되지 않을 수 있습니다)</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCREEN 2: MAIN BOARD (격자형 콤팩트 고정 높이 뷰어) -->
+        <section id="screen-game" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-3 items-start" style="min-height:0; flex:1;">
+            
+            <!-- Left Side: Round Event Console & Market News -->
+            <div class="lg:col-span-4 flex flex-col gap-2.5 justify-between shrink-0" style="overflow:visible;" id="left-panel">
+                
+                <!-- Financial Status Card -->
+                <div class="rounded-2xl p-3 shadow-xl relative overflow-hidden shrink-0" style="background:linear-gradient(145deg,#f5edd6,#ede0c0); border:1px solid rgba(139,90,43,0.40); color:#1a0f00;">
+                    <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                    <h3 class="text-slate-400 text-[12px] uppercase tracking-wider mb-1.5 font-bold flex items-center gap-1.5">
+                        <i class="fa-solid fa-wallet text-emerald-500"></i> 자산 포트폴리오
+                    </h3>
+                    
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <span class="text-[12px] text-slate-500 block leading-tight">여유 현금</span>
+                            <span class="text-lg sm:text-xl font-black text-white leading-none" id="stat-cash">1,000</span>
+                            <span class="text-[11px] text-slate-400 font-bold ml-0.5">레알</span>
+                        </div>
+                        <div>
+                            <span class="text-[12px] text-slate-500 block leading-tight">총 주식 가치</span>
+                            <span class="text-lg sm:text-xl font-black text-blue-400 leading-none" id="stat-shares-val">0</span>
+                            <span class="text-[11px] text-slate-400 font-bold ml-0.5">레알</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-2 pt-1.5 border-t border-slate-800/80 flex justify-between items-center text-[12px]">
+                        <span class="text-slate-400 font-semibold">비윤리적 상선 투자액:</span>
+                        <span class="font-bold px-1.5 py-0.5 rounded bg-slate-800 text-slate-400" id="stat-unethical-invest">0 레알</span>
+                    </div>
+                </div>
+
+                <!-- Live Investment Status table (실시간 요약 표: 선단명/투자상품/평단가/보유주수/평가금) -->
+                <div class="rounded-2xl p-2.5 shadow-xl flex flex-col min-h-0" style="flex:1.1; background:linear-gradient(145deg,#f5edd6,#ede0c0); border:1px solid rgba(139,90,43,0.40); color:#1a0f00;">
+                    <div class="flex items-center gap-1.5 shrink-0 mb-1.5">
+                        <i class="fa-solid fa-receipt text-amber-500 text-[12px]"></i>
+                        <span class="text-[12px] uppercase tracking-wider font-bold" style="color:#c9a96e;">내 투자 선박 실시간 현황</span>
+                        <span class="text-[10px] ml-auto" style="color:#7a5c2e;">(<span class="pnl-profit">빨강=이득</span> · <span class="pnl-loss">파랑=손해</span>)</span>
+                    </div>
+                    <div class="flex-grow overflow-y-auto border rounded-lg min-h-0" style="border-color:rgba(139,90,43,0.25); background:rgba(255,255,255,0.35);">
+                        <table class="w-full text-[10px]" id="live-portfolio-table-wrap">
+                            <thead class="sticky top-0 z-10" style="background:rgba(240,225,190,0.95);">
+                                <tr style="color:#9e7a4a;">
+                                    <th class="p-1.5 text-left">선단명</th>
+                                    <th class="p-1 text-center">평단가</th>
+                                    <th class="p-1 text-center">주수</th>
+                                    <th class="p-1 text-center">평가금</th>
+                                    <th class="p-1 text-right">수익률</th>
+                                </tr>
+                            </thead>
+                            <tbody id="live-portfolio-table">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Next Situation Forecast (다음 상황 예측 카드 4개) -->
+                <div id="forecast-panel" class="rounded-2xl p-2.5 shadow-xl shrink-0" style="background:linear-gradient(145deg,rgba(28,12,2,0.93),rgba(40,22,4,0.90)); border:1px solid rgba(139,90,43,0.50); overflow:visible;" style="flex: 0.9; display:flex; flex-direction:column; min-height:0;">
+                    <h3 class="text-amber-300 text-[12px] uppercase tracking-wider mb-1.5 font-bold flex items-center gap-1.5 shrink-0">
+                        <i class="fa-solid fa-binoculars"></i> 다음 정세 예측 첩보
+                    </h3>
+                    <div id="forecast-cards-container" class="grid grid-cols-2 gap-1.5 min-h-0 flex-grow" style="overflow:visible;">
+                        <!-- JS가 4개의 예측 카드를 동적으로 렌더링 -->
+                    </div>
+                </div>
+
+                <!-- Event News Console -->
+                <div class="rounded-2xl p-3 shadow-xl flex flex-col justify-between shrink-0" style="background:linear-gradient(145deg,#f5edd6,#ede0c0); border:1px solid rgba(139,90,43,0.40); color:#1a0f00;">
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <span class="text-[11px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1" id="news-type-badge">
+                                <i class="fa-solid fa-circle-info animate-pulse"></i> 출항 준비 단계 (포트폴리오 구성)
+                            </span>
+                            <span class="text-[11px] bg-slate-800 text-slate-300 border border-slate-700 px-1.5 py-0.5 rounded font-bold" id="news-round-label">
+                                준비중
+                            </span>
+                        </div>
+                        
+                        <div id="event-content-area" class="space-y-1">
+                            <h4 class="text-sm font-extrabold text-white leading-tight" id="news-title">선단 출발을 앞두고 자금을 모집합니다.</h4>
+                            <p class="text-slate-300 text-[12px] leading-relaxed" id="news-desc">
+                                모든 선단이 본격 출발하기 전입니다! 모든 선단 투자 단위가 50레알인 것은 지금이 유일합니다. 분산 투자하여 포트폴리오를 채우십시오. 돌발 상황에 대비하여 일부 현금을 보유할 것을 권고합니다.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Next Round Action -->
+                    <div id="next-action-area" class="mt-2 pt-2 border-t border-slate-800/80 flex gap-2 flex-wrap sm:flex-nowrap">
+                        <button onclick="sellAllAssets()" class="w-1/3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-bold text-[12px] rounded-xl transition duration-150 active:scale-95">
+                            전액 매도
+                        </button>
+                        <button onclick="proceedNextRound()" id="btn-next-round" class="w-2/3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-[12px] rounded-xl transition duration-150 shadow-lg shadow-blue-500/10 active:scale-95 flex items-center justify-center gap-1">
+                            <span>1라운드 출항 및 첫 소식지 확인</span> <i class="fa-solid fa-angle-right text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: 8 Ships Grid (콤팩트 No-Scroll 그리드) -->
+            <div class="lg:col-span-8 flex flex-col gap-2" id="right-panel">
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-2" id="ships-grid" style="grid-auto-rows:minmax(0,1fr);">
+                    <!-- Dynamic Generation of Ships Cards in JavaScript -->
+                </div>
+            </div>
+        </section>
+
+        <!-- NEWSPAPER / BROADCAST OVERLAY MODAL -->
+        <div id="newspaper-modal" class="hidden fixed inset-0 z-50 flex justify-center items-center p-2 lg:p-6" style="background:rgba(26,21,16,0.95);">
+            <div class="bg-[#f4edd8] text-[#1a1a1a] w-full max-w-2xl border-[4px] lg:border-[6px] border-double border-[#3a2e1d] shadow-2xl p-3 lg:p-6 flex flex-col justify-between" style="max-height:92svh; overflow-y:auto;">
+                <div class="border-b-4 border-double border-[#3a2e1d] pb-2 text-center shrink-0">
+                    <h2 class="header-title text-2xl font-black tracking-widest text-[#1a1a1a]">THE LISBON CHRONICLE</h2>
+                    <div class="flex justify-between text-sm font-bold text-[#554433] mt-1 border-t border-[#3a2e1d] pt-1">
+                        <span id="news-modal-date">연도: 1500년</span>
+                        <span id="news-modal-round">ROUND 0 / 10</span>
+                    </div>
+                </div>
+                
+                <div class="flex-grow flex flex-col justify-start items-center text-center p-4 min-h-0 overflow-y-auto">
+                    <h3 class="text-xl font-extrabold text-[#2c1a04] mb-3 leading-tight" id="news-modal-title">선단 대규모 출항 준비 완비!</h3>
+                    <p class="text-base text-slate-800 leading-relaxed max-w-xl" style="white-space: pre-line;" id="news-modal-desc">
+                        유럽 전역의 자본가들이 포르투갈 리스본으로 모여들고 있습니다. 미지의 바다로 향하는 8척의 상선단이 무사히 자금 조달을 마치고 동시 기동을 준비 중입니다. 리스크를 극대화해 분산하십시오!
+                    </p>
+                    
+                    <!-- Sudden Event Options -->
+                    <div id="news-modal-options" class="hidden w-full max-w-lg mt-4 space-y-2 shrink-0">
+                        <p class="text-sm text-amber-950 font-bold mb-1"><i class="fa-solid fa-scale-balanced"></i> 대처 방안을 소식지에서 즉각 단언하십시오:</p>
+                        <button onclick="handleOptionChoiceInNews(1)" id="modal-opt1" class="w-full text-left text-sm bg-[#e5dac1] hover:bg-[#3a2e1d] hover:text-[#f4edd8] border border-[#3a2e1d] p-2.5 rounded-lg transition duration-150 font-bold">
+                            옵션 1 선택 텍스트
+                        </button>
+                        <button onclick="handleOptionChoiceInNews(2)" id="modal-opt2" class="w-full text-left text-sm bg-[#e5dac1] hover:bg-[#3a2e1d] hover:text-[#f4edd8] border border-[#3a2e1d] p-2.5 rounded-lg transition duration-150 font-bold">
+                            옵션 2 선택 텍스트
+                        </button>
+                    </div>
+                </div>
+
+                <div class="text-center shrink-0 border-t border-[#3a2e1d]/30 pt-3">
+                    <button onclick="closeNewspaperModal()" id="btn-close-newspaper" class="px-8 py-2.5 bg-[#3a2e1d] hover:bg-[#554433] text-[#f4edd8] font-bold rounded-lg transition text-base">
+                        상황 대처하기 (투자 화면 보기)
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: VOYAGE RESOLUTION SCREEN (ANIMATION) -->
+        <section id="screen-voyage" class="hidden w-full max-w-4xl mx-auto py-6">
+            <div class="text-center mb-6">
+                <h2 class="header-title text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-teal-300 to-amber-300">
+                    최종 항해 결과 (FINAL VOYAGE)
+                </h2>
+                <p class="text-sm text-slate-400 mt-1">10라운드 모험의 마지막 결말입니다. 어느 상선단이 풍랑을 뚫고 생환했을지 확인합니다.</p>
+            </div>
+
+            <div class="bg-slate-950/90 border border-slate-800 rounded-3xl p-5 shadow-2xl space-y-4 overflow-hidden relative">
+                <div class="absolute inset-x-0 bottom-0 h-10 bg-blue-900/10 overflow-hidden">
+                    <svg class="ocean-wave absolute bottom-0 w-[200%] h-6 opacity-30 fill-blue-500" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                        <path d="M0,60 C150,90 350,30 500,60 C650,90 850,30 1000,60 C1150,90 1350,30 1500,60 C1650,90 1850,30 2000,60 L2000,120 L0,120 Z"></path>
+                    </svg>
+                </div>
+
+                <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 bg-yellow-500 rounded-full animate-ping"></span>
+                        <span class="text-xs font-bold text-slate-300" id="voyage-status">선단 순차 출항 중...</span>
+                    </div>
+                    <span class="text-[10px] text-slate-500">주사위 성공 판단 시뮬레이터</span>
+                </div>
+
+                <div class="space-y-2.5" id="voyage-tracks-container">
+                    <!-- Dynamic rendering in JS -->
+                </div>
+
+                <div id="voyage-finish-actions" class="hidden text-center pt-4 border-t border-slate-800 relative z-10">
+                    <button onclick="goToResultsScreen()" class="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 rounded-xl font-bold text-sm text-white shadow-xl shadow-emerald-500/20 active:scale-95 transition-all flex items-center gap-2 mx-auto">
+                        최종 등급 및 칭호 발표장 가기 <i class="fa-solid fa-ranking-star"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- SCREEN 4: RESULTS SCREEN -->
+        <section id="screen-results" class="hidden w-full max-w-3xl mx-auto" style="max-height:calc(100vh - 65px); overflow-y:auto; padding: 12px 0;">
+            <div class="bg-slate-950/90 border-2 border-slate-800 rounded-3xl p-4 shadow-2xl relative overflow-hidden text-center space-y-3">
+                
+                <div class="absolute inset-0 bg-radial-gradient from-blue-500/10 via-transparent to-transparent pointer-events-none"></div>
+
+                <div>
+                    <span class="text-[10px] font-bold tracking-widest text-blue-400 uppercase">THE AGE OF VOYAGE ENDING</span>
+                    <h2 class="header-title text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-b from-white to-slate-400 mt-1">
+                        투자자 영예의 전당
+                    </h2>
+                </div>
+
+                <div class="py-4 px-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl max-w-xs mx-auto relative">
+                    <span class="absolute -top-3 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white text-[9px] font-bold px-3 py-0.5 rounded-full uppercase tracking-wider">
+                        최종 획득 등급
+                    </span>
+                    <div class="text-5xl font-black mb-1 text-yellow-400 tracking-wider font-mono uppercase" id="result-grade">SS</div>
+                    <div class="text-xs text-slate-400" id="result-grade-desc">동인도 회사의 위대한 지배자</div>
+                </div>
+
+                <div class="max-w-xl mx-auto border-t border-b py-2" style="border-color:rgba(92,61,17,0.4);">
+                    <span class="text-slate-500 text-[10px] font-bold uppercase tracking-widest block mb-1.5">🏅 획득한 명예 칭호</span>
+                    <div id="result-titles-container" class="space-y-1.5">
+                        <!-- JS로 다중 칭호 렌더링 -->
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-2 max-w-md mx-auto p-2 rounded-xl text-center text-xs" style="background:rgba(35,18,3,0.35);">
+                    <div>
+                        <span class="text-slate-500 block">초기 자본</span>
+                        <span class="font-bold text-slate-300">1,000 레알</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 block">남은 현금</span>
+                        <span class="font-bold text-slate-300" id="result-cash">200 레알</span>
+                    </div>
+                    <div>
+                        <span class="text-slate-500 block">항해 성공 수익</span>
+                        <span class="font-bold text-emerald-400" id="result-payout">4,500 레알</span>
+                    </div>
+                </div>
+
+                <div class="text-lg font-black flex items-center justify-center gap-1.5" style="color:#e8d5a3;">
+                    <span>최종 합산 자산:</span>
+                    <span class="text-emerald-400 text-xl" id="result-total-wealth">4,700</span>
+                    <span class="text-xs text-slate-400">레알</span>
+                </div>
+
+                <!-- Custom feedback markers -->
+                <div class="text-left p-3 rounded-2xl max-w-xl mx-auto space-y-1.5 text-xs" style="background:rgba(28,12,2,0.85);border:1px solid rgba(92,61,17,0.4);">
+                    <h4 class="font-bold uppercase text-slate-400 tracking-wider border-b border-slate-800 pb-1.5 flex items-center gap-1.5">
+                        <i class="fa-solid fa-receipt text-blue-500"></i> 투자 활동 기록 분석결과
+                    </h4>
+                    <div class="grid grid-cols-2 gap-y-1.5">
+                        <span class="text-slate-500">노예 무역 관여 여부:</span>
+                        <span class="text-right font-bold" id="rec-unethical">윤리적 투자 성공</span>
+                        
+                        <span class="text-slate-500">포트폴리오 분산도:</span>
+                        <span class="text-right font-bold" id="rec-diversify">안정적 분산 (8선단 중 5선단)</span>
+                        
+                        <span class="text-slate-500">돌발 상황 대처 성향:</span>
+                        <span class="text-right font-bold" id="rec-ethics-score">도덕성 중시형</span>
+
+                        <span class="text-slate-500">한 선단 몰빵 이력:</span>
+                        <span class="text-right font-bold text-amber-500" id="rec-allin">없음</span>
+                    </div>
+                </div>
+
+                <!-- Sheet Submission Status -->
+                <div class="max-w-xl mx-auto text-[12px]">
+                    <div id="sheet-submit-status" class="bg-slate-900/60 border border-slate-800 text-slate-400 px-3 py-2 rounded-lg flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-spinner animate-spin"></i> 칭호 기록을 명부 스프레드시트에 제출하는 중입니다...
+                    </div>
+                </div>
+
+                <!-- Restart Trigger -->
+                <div class="pt-1 flex flex-col sm:flex-row gap-2 justify-center text-sm">
+                    <button onclick="resetGame()" class="px-6 py-3 rounded-xl font-bold text-amber-100 shadow-lg active:scale-95 transition flex items-center justify-center gap-1.5" style="background:linear-gradient(135deg,#8b4513,#c8960c);">
+                        <i class="fa-solid fa-rotate-left"></i> 처음부터 다시 도전
+                    </button>
+                    <button onclick="window.print()" class="px-6 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl font-bold text-slate-300 active:scale-95 transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-print"></i> 결과 보고서 인쇄
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <script>
+        // ----------------------------------------------------
+        // GOOGLE SHEETS WEBHOOK 연동 설정
+        // ----------------------------------------------------
+        // 아래 URL을 본인의 Google Apps Script 웹앱 배포 URL로 교체하세요.
+        // (Google Sheets > 확장 프로그램 > Apps Script 에서 webhook 코드를 배포한 뒤 "웹앱 URL"을 붙여넣으면
+        //  게임 결과 제출 시 자동으로 칭호 기록이 시트에 누적되고, 로비 화면의 명예의 전당 TOP10도 이 URL에서 데이터를 읽어옵니다.)
+        const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzeK_YRZlxwdylXVa9WU-oAOtBV2iVGEPijLf6fYrOZPOtpA_XgMRa_h4rWWfvcNg_u/exec"; // 예: "https://script.google.com/macros/s/AKfycbx.../exec"
+
+        // ----------------------------------------------------
+        // PLAYER IDENTITY (반 / 번호 / 이름)
+        // ----------------------------------------------------
+        let playerClass = "";
+        let playerNumber = "";
+        let playerName = "";
+
+        // ----------------------------------------------------
+        // CORE GAME STATE VARIABLES
+        // ----------------------------------------------------
+        let cash = 1000;
+        let currentRound = 0; // 0 represents the newly introduced preparation step
+        const TOTAL_ROUNDS = 10; // 총 10라운드로 축소 (돌발 상황은 별도 처리, 라운드 수에 미포함)
+        
+        let ethicalScore = 0; // Cumulative ethical decisions
+        let totalInvestedInUnethical = 0; // Tracks cumulative Reals spent on Ship E
+        let hasUnethicalInvestedNow = false; // Tracks if slave ship is currently owned
+        let hasAllInHistory = false; // Checks if player ever put >85% assets in 1 ship
+        let isEthicalCrisisTriggered = false; // Checked in some sudden events
+        let maxSingleShipRatio = 0; // 한 선단에 몰린 최대 자산 비중 기록 (칭호 판정용)
+        let buyActionCount = 0; // 매수 클릭 총 횟수 (투자 성향 판정용)
+        let sellActionCount = 0; // 매도 클릭 총 횟수
+        
+        // Investment shares tracker
+        let portfolio = {
+            A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0, H: 0
+        };
+
+        // 평단가(매입 평균가) 추적: 지금까지 매입한 총 금액 / 보유 주수 기준
+        let avgCost = {
+            A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0, H: 0
+        };
+        // 누적 매입 총액(평단가 계산용 보조 데이터)
+        let totalCostBasis = {
+            A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0, H: 0
+        };
+
+        // 8 Ships Initial Configurations (Includes Captain and Cargo Img links placeholder)
+        const baseShips = {
+            A: { id: "A", name: "산타 마리아 호", captain: "디아스 선장", cargo: "후추", destination: "인도 코친", baseProb: 70, currentProb: 70, baseMult: 1.5, currentMult: 1.5, isUnethical: false, icon: "fa-seedling", bg: "from-emerald-950/50 to-emerald-900/10", border: "border-emerald-800/60", badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", history: [50], captainImg: "captain_A.jpg", goodsImg: "goods_A.jpg", flagImg: "flag_A.png" },
+            B: { id: "B", name: "골든 하인드 호", captain: "드레이크 선장", cargo: "정향", destination: "몰루카 제도", baseProb: 40, currentProb: 40, baseMult: 3.0, currentMult: 3.0, isUnethical: false, icon: "fa-leaf", bg: "from-blue-950/50 to-blue-900/10", border: "border-blue-800/60", badgeColor: "bg-blue-500/10 text-blue-400 border-blue-500/20", history: [50], captainImg: "captain_B.jpg", goodsImg: "goods_B.jpg", flagImg: "flag_B.png" },
+            C: { id: "C", name: "엘카노의 전함", captain: "엘카노 선장", cargo: "은괴", destination: "페루 포토시", baseProb: 60, currentProb: 60, baseMult: 2.0, currentMult: 2.0, isUnethical: false, icon: "fa-coins", bg: "from-cyan-950/50 to-cyan-900/10", border: "border-cyan-800/60", badgeColor: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", history: [50], captainImg: "captain_C.jpg", goodsImg: "goods_C.jpg", flagImg: "flag_C.png" },
+            D: { id: "D", name: "산 프란시스코 호", captain: "고메스 선장", cargo: "감자", destination: "신대륙 연안", baseProb: 80, currentProb: 80, baseMult: 1.2, currentMult: 1.2, isUnethical: false, icon: "fa-wheat-awn", bg: "from-amber-950/50 to-amber-900/10", border: "border-amber-800/60", badgeColor: "bg-amber-500/10 text-amber-400 border-amber-500/20", history: [50], captainImg: "captain_D.jpg", goodsImg: "goods_D.jpg", flagImg: "flag_D.png" },
+            E: { id: "E", name: "블랙 에보니 호", captain: "호킨스 선장", cargo: "노예", destination: "카리브해 농장", baseProb: 50, currentProb: 50, baseMult: 4.5, currentMult: 4.5, isUnethical: true, icon: "fa-link", bg: "from-rose-950/50 to-rose-900/10", border: "border-rose-800/60", badgeColor: "bg-rose-500/10 text-rose-400 border-rose-500/20", history: [50], captainImg: "captain_E.jpg", goodsImg: "goods_E.jpg", flagImg: "flag_E.png" },
+            F: { id: "F", name: "빅토리아 호", captain: "마젤란 선장", cargo: "비단", destination: "필리핀 항로", baseProb: 30, currentProb: 30, baseMult: 5.0, currentMult: 5.0, isUnethical: false, icon: "fa-scroll", bg: "from-purple-950/50 to-purple-900/10", border: "border-purple-800/60", badgeColor: "bg-purple-500/10 text-purple-400 border-purple-500/20", history: [50], captainImg: "captain_F.jpg", goodsImg: "goods_F.jpg", flagImg: "flag_F.png" },
+            G: { id: "G", name: "이스파뇰라 호", captain: "코르테스 선장", cargo: "설탕", destination: "쿠바 식민지", baseProb: 65, currentProb: 65, baseMult: 1.8, currentMult: 1.8, isUnethical: false, icon: "fa-cubes-stacked", bg: "from-indigo-950/50 to-indigo-900/10", border: "border-indigo-800/60", badgeColor: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20", history: [50], captainImg: "captain_G.jpg", goodsImg: "goods_G.jpg", flagImg: "flag_G.png" },
+            H: { id: "H", name: "레반트의 별 호", captain: "피에트로 상인", cargo: "면직물", destination: "베네치아 항구", baseProb: 85, currentProb: 85, baseMult: 1.1, currentMult: 1.1, isUnethical: false, icon: "fa-shirt", bg: "from-slate-900 to-slate-900/40", border: "border-slate-800/60", badgeColor: "bg-slate-500/10 text-slate-400 border-slate-500/20", history: [50], captainImg: "captain_H.jpg", goodsImg: "goods_H.jpg", flagImg: "flag_H.png" }
+        };
+
+        // Deep copy of ships state
+        let ships = JSON.parse(JSON.stringify(baseShips));
+        // 선박별 호재/악재 상태 (라운드 업데이트마다 갱신)
+        let shipMarketStatus = {}; // { shipId: 'good' | 'bad' | 'neutral' }
+
+        // 30가지 전세 상황들 (어떤 상황을 고르더라도 모든 선박의 가치가 유기적으로 변동하도록 global 플럭스 반영)
+        const situations = [
+            {
+                title: "유럽 내 전염병 재유행 및 면역력 후문",
+                desc: "유럽 주요 도시에 전염병 돌풍이 불자 동양의 '후추'와 '정향'이 치료에 특효약이라는 민간 소문이 퍼지기 시작합니다.",
+                impact: (s) => {
+                    s.A.currentMult += 0.5; s.A.currentProb += 5;
+                    s.B.currentMult += 1.0; s.B.currentProb -= 5;
+                }
+            },
+            {
+                title: "오스만 제국의 지중해 관세 인상",
+                desc: "지중해 패권을 잡은 오스만 제국이 이탈리아 상인들에게 막대한 전통 통행료와 세금을 요구하며 기존 육로가 봉쇄되었습니다.",
+                impact: (s) => {
+                    s.H.currentProb -= 15; s.H.currentMult -= 0.1;
+                    s.A.currentProb += 10; s.B.currentProb += 5; s.F.currentProb += 5;
+                }
+            },
+            {
+                title: "포토시 은광의 기록적인 채굴량",
+                desc: "신대륙의 포토시 지역에서 거대한 은맥이 발견되었다는 소식에 스페인 전함들과 채굴 선단이 흥분 상태에 휩싸입니다.",
+                impact: (s) => {
+                    s.C.currentMult += 0.8; s.C.currentProb += 5;
+                }
+            },
+            {
+                title: "항구의 돌풍 및 일부 선박 파손",
+                desc: "서아프리카 및 지중해 연안을 급습한 태풍으로 많은 배들이 도크에서 수리 상태에 들어갑니다.",
+                impact: (s) => {
+                    s.E.currentProb -= 15; s.H.currentProb -= 10;
+                }
+            },
+            {
+                title: "대서양 노예 사냥 규제안 통과 루머",
+                desc: "교황청과 에스파냐 황실 내부에서 원주민 및 일부 무역에 도덕적 가이드라인 제정을 논하기 시작했다는 정세 보고가 들어옵니다.",
+                impact: (s) => {
+                    s.E.currentProb -= 10; s.E.currentMult -= 0.5;
+                }
+            },
+            {
+                title: "선원 괴혈병 특효약 '레몬즙' 배급",
+                desc: "오랜 항해에서 선원들이 괴혈병으로 쓰러지는 가운데 오렌지와 레몬 보급 활성화 대책이 수립됩니다.",
+                impact: (s) => {
+                    s.F.currentProb += 20; s.B.currentProb += 15;
+                }
+            },
+            {
+                title: "유럽 내 신대륙 식량 작물 본격 재배",
+                desc: "신대륙에서 들여온 감자와 옥수수가 구황작물로 대대적으로 환영받으며 귀중한 식량 보급원으로 인정받게 됩니다.",
+                impact: (s) => {
+                    s.D.currentMult += 0.4; s.D.currentProb += 10;
+                }
+            },
+            {
+                title: "카리브해 사탕수수 풍작 및 사탕 붐",
+                desc: "유럽 귀족층 사이에 홍차와 과자에 감미료로 사탕수수 설탕을 듬뿍 넣는 '설탕 신드롬'이 대유행하기 시작합니다.",
+                impact: (s) => {
+                    s.G.currentMult += 0.6; s.G.currentProb += 5;
+                }
+            },
+            {
+                title: "마젤란 선단, 우방국 항구 입항 거절",
+                desc: "초장거리 노선을 개척하는 마젤란 선단이 영토 분쟁으로 인해 중간 항구 보급에 큰 어려움을 겪고 있습니다.",
+                impact: (s) => {
+                    s.F.currentProb -= 15;
+                }
+            },
+            {
+                title: "영국 엘리자베스 여왕의 드레이크 적극 후원",
+                desc: "영국 왕실이 무장 상선대 대장 드레이크 선장에게 영지를 하사하며, 스페인 해군을 무찌르라는 비밀 왕실 특허를 부여했습니다.",
+                impact: (s) => {
+                    s.B.currentMult += 1.2; s.B.currentProb += 10;
+                }
+            },
+            {
+                title: "원주민 부족 연합의 은광산 포위",
+                desc: "신대륙의 급작스러운 침탈에 원주민 연합이 강력하게 반발하여 포토시 인근 채굴 기지를 야간 습격했습니다.",
+                impact: (s) => {
+                    s.C.currentProb -= 25;
+                }
+            },
+            {
+                title: "명나라 장벽 일시 완화 및 교역량 증가",
+                desc: "동방의 대제국 명나라가 일부 서구 해상 무역 세력에 포르투갈 마카오 입항권을 정식 인가하여 도자기 비단 교역로가 크게 개선됩니다.",
+                impact: (s) => {
+                    s.F.currentMult += 1.5; s.F.currentProb += 15;
+                }
+            },
+            {
+                title: "지중해 연안 해적떼 대출몰 소동",
+                desc: "북아프리카 바르바리 해적단이 지중해 중앙 무역로를 봉쇄하며 전통 무역선들의 퇴로를 위협합니다.",
+                impact: (s) => {
+                    s.H.currentProb -= 20;
+                }
+            },
+            {
+                title: "아프리카 서부 해변 기근 및 노예값 하락",
+                desc: "서아프리카 부족 전쟁이 극에 달하며 공급처에서 공급량이 과대 폭증해 노예 매입 가격이 헐값 수준으로 떨어졌습니다.",
+                impact: (s) => {
+                    s.E.currentMult += 1.0;
+                }
+            },
+            {
+                title: "인도 항로 폭우 및 모순적 기후 현상",
+                desc: "인도양 전역에 불어닥친 거대 몬순(우기) 기후로 후추를 싣고 오려던 함선들의 출발이 대폭 지체되었습니다.",
+                impact: (s) => {
+                    s.A.currentProb -= 15;
+                }
+            },
+            {
+                title: "유럽 대흉작으로 감자 가치 재조명",
+                desc: "유럽 대륙에 냉해가 몰려와 기존 곡식 농사를 망쳤습니다. 척박한 땅에서도 아주 잘 자라는 신대륙의 감자만이 유일한 희망입니다.",
+                impact: (s) => {
+                    s.D.currentMult += 0.5; s.D.currentProb += 10;
+                }
+            },
+            {
+                title: "설탕 대체 사탕수수 가공 신기술 확산",
+                desc: "유럽 무역 가공업자들이 사탕수수를 끓여 순도 높은 하얀 결정 설탕을 정제하는 공정을 한 단계 더 진화시켰습니다.",
+                impact: (s) => {
+                    s.G.currentMult += 0.3;
+                }
+            },
+            {
+                title: "동방 비단 직물 유입 과다로 단가 하락",
+                desc: "여러 루트를 통해 유입된 실크가 시중에 일시적으로 넘쳐 흘러 고급 비단직물의 평균 가격이 일시 하락했습니다.",
+                impact: (s) => {
+                    s.F.currentMult -= 0.8;
+                }
+            },
+            {
+                title: "베네치아 연합, 가짜 신항로 가치 하락 가짜뉴스 살포",
+                desc: "구 지중해 항로 권력을 쥔 베네치아 거상 연합이 '신대륙의 후추는 독을 품었다'는 유언비어를 은밀히 유통합니다.",
+                impact: (s) => {
+                    s.A.currentMult -= 0.2; s.H.currentMult += 0.2;
+                }
+            },
+            {
+                title: "스페인 무적함대 카리브해 순찰 경계 강화",
+                desc: "밀무역과 도적질을 일삼는 사략선들을 척결하려 무적함대가 순찰을 시작해 모험 선박들의 꼬리가 밟히고 있습니다.",
+                impact: (s) => {
+                    s.B.currentProb -= 15; s.G.currentProb -= 10;
+                }
+            },
+            {
+                title: "노예수송선 선내 폭동 및 통제 불능",
+                desc: "수송 도중 선상 감금 구역의 무리한 과밀화로 인해 성난 반란이 일어나 선원들이 크게 사망했습니다.",
+                impact: (s) => {
+                    s.E.currentProb -= 20; s.E.currentMult -= 0.5;
+                }
+            },
+            {
+                title: "디아스 선장, 희망봉 주변 이상 조류 극복",
+                desc: "베테랑 디아스 선장이 폭풍의 전진기지인 아프리카 최남단 희망봉 근처의 최악의 난조류를 완벽히 매핑해 안정적 우회로를 찾았습니다.",
+                impact: (s) => {
+                    s.A.currentProb += 15;
+                }
+            },
+            {
+                title: "포르투갈-스페인 영토 분쟁 타결 (토르데시야스 조약)",
+                desc: "양국 교황 주재하에 영해 선긋기 협정이 명확히 이루어지며 합의 세력 하의 서쪽 카리브해 개척이 평화 기조를 탑니다.",
+                impact: (s) => {
+                    s.G.currentProb += 15; s.C.currentProb += 10;
+                }
+            },
+            {
+                title: "식량 무역 독점 기획 및 조합 설립",
+                desc: "주요 왕가에서 신대륙 감자와 옥수수 대규모 조달을 위한 '식량 수급 카르텔'을 형성해 고정 수매가를 보장하기 시작합니다.",
+                impact: (s) => {
+                    s.D.currentMult += 0.3;
+                }
+            },
+            {
+                title: "마젤란 선단의 선장 사망설 및 혼란",
+                desc: "필리핀 근해 전투에서 총사령관 마젤란 선장이 전사했다는 어두운 소식이 동방 연락선으로부터 긴급 당도합니다.",
+                impact: (s) => {
+                    s.F.currentProb -= 20;
+                }
+            },
+            {
+                title: "유럽 대공항 전조 증상 및 현금 사재기",
+                desc: "금속 화폐 가치의 불신과 경제 둔화로 인해 고가 사치품인 도자기와 향신료 소비가 일시 위축되고 안전 지중해 상품이 보장받습니다.",
+                impact: (s) => {
+                    s.F.currentMult -= 0.5; s.A.currentMult -= 0.2; s.H.currentProb += 10;
+                }
+            },
+            {
+                title: "몰루카 향료 독점 전쟁 발발",
+                desc: "정향을 독점하려는 포르투갈과 네덜란드 군함들이 산발적인 포격전을 벌이며 현지 무역 거점이 극도의 화염에 휩싸입니다.",
+                impact: (s) => {
+                    s.B.currentProb -= 15; s.B.currentMult += 0.8;
+                }
+            },
+            {
+                title: "신대륙 은 수송선 해상 기습 나포 성공",
+                desc: "사략선단이 은을 한가득 싣고 귀환하던 에스파냐 수송선을 통째로 사로잡았다는 영웅 무용담이 펍에서 들려옵니다.",
+                impact: (s) => {
+                    s.B.currentMult += 1.0; s.C.currentProb -= 10;
+                }
+            },
+            {
+                title: "안데스 산맥 은광 침수 사태 발생",
+                desc: "유독 차가운 여름 폭우로 채굴 기지 깊숙한 터널 배수 시스템이 터져 채광 작업이 3달간 마비되었습니다.",
+                impact: (s) => {
+                    s.C.currentProb -= 15; s.C.currentMult -= 0.2;
+                }
+            },
+            {
+                title: "지중해 연안 물가 폭등 및 직물 가치 갱신",
+                desc: "신항로들이 불침번을 서는 사이 지중해 도시 인구밀도가 부활하며, 전통적인 이탈리아 고급 모직 직물의 수요가 폭등합니다.",
+                impact: (s) => {
+                    s.H.currentMult += 0.4; s.H.currentProb += 10;
+                }
+            }
+        ];
+
+        // 10가지 역사적 돌발 상황들 (기사 모달 내부에서 직접 분기 선택 작동)
+        const suddenEvents = [
+            {
+                title: "[국가 돌발] 마젤란의 긴급 추가 자금 수송 구걸",
+                desc: "빅토리아 호의 마젤란 선장이 태평양 횡단 중 선체 균열과 장비 파손으로 보충 보급을 하지 못해 조기 파산 회항 위기에 처했다며 주주들에게 비상 수혈을 요청해왔습니다.",
+                opt1: "현금 100 레알을 긴급 지원한다. [빅토리아 호 성공확률 +25%, 기대수익 6.0배로 폭증]",
+                opt2: "리스크 관리가 먼저다. 거절한다. [선원 항명과 태업으로 빅토리아 호 주가 50% 삭감]",
+                action: (choice) => {
+                    if (choice === 1) {
+                        if (cash < 100) return "수중의 현금이 모자라 어쩔 수 없이 지원이 무산되었습니다!";
+                        cash -= 100;
+                        ships.F.currentProb += 25;
+                        ships.F.currentMult = 6.0;
+                        ethicalScore += 1;
+                        return "100 레알을 긴급 승인해 물자를 조달했습니다! 빅토리아 호 선장과 선원들의 투지가 불타오릅니다.";
+                    } else {
+                        ships.F.currentProb -= 25;
+                        ships.F.currentMult = Math.max(1.0, ships.F.currentMult - 1.5);
+                        return "요청을 정중히 거절했습니다. 선단 내부 폭동이 예고되어 빅토리아 호의 원정 가치가 대폭락합니다.";
+                    }
+                }
+            },
+            {
+                title: "[윤리 돌발] 바티칸 교황청의 노예 수송선 금지 칙서",
+                desc: "교황청에서 서아프리카 인권 유린과 노예 무역의 비도덕성을 엄정 규탄하며, 노예 수송선에 즉각적인 무역 철수 및 제재령을 공포했습니다.",
+                opt1: "칙서에 공식 서명하고 전량 손실 철수한다. [블랙 에보니 호 전액 반값에 강제 청산 처분]",
+                opt2: "자본이 우선이다! 은밀한 우회로를 뚫는다. [주가 보존, 단 심각한 도덕성 하락 스택 누적]",
+                action: (choice) => {
+                    if (choice === 1) {
+                        const currentVal = calculateSharePrice(ships.E);
+                        const refund = portfolio.E * currentVal * 0.5;
+                        cash += refund;
+                        portfolio.E = 0;
+                        ethicalScore += 3;
+                        return `윤리 투자 체결! 보유하고 있던 블랙 에보니 호의 지분을 반값인 ${Math.round(refund)} 레알에 회수하고 노예 사슬을 끊어냈습니다.`;
+                    } else {
+                        ethicalScore -= 4;
+                        totalInvestedInUnethical += 150;
+                        return "종교는 외면에 걸린 문서일 뿐! 지중해 비밀 거간꾼을 이용해 노예선 독점 가치를 악착같이 사수합니다.";
+                    }
+                }
+            },
+            {
+                title: "[전쟁 돌발] 해적 드레이크의 불법 사략 함대 기습 제안",
+                desc: "카리브 연안에 정박한 에스파냐 황금 보물 수송선을 공동 기습해 금화를 탈취하자는 드레이크 선장의 사략 동맹 비밀 전갈이 도달했습니다.",
+                opt1: "용병 무장 보급금 50 레알을 헌납한다. [정향선 배율 격증, 단 은 수송선 성공확률 폭락]",
+                opt2: "도적질에는 동참하지 않는다. [지중해 전통 안정 교역망 평판 급등 및 확률 증가]",
+                action: (choice) => {
+                    if (choice === 1) {
+                        if (cash < 50) return "자금난으로 인해 해적과의 밀약이 파기되었습니다.";
+                        cash -= 50;
+                        ships.B.currentMult += 1.5;
+                        ships.C.currentProb -= 15;
+                        ethicalScore -= 2;
+                        return "무법 지대에 베팅합니다! 골든 하인드 호의 화포 보급이 완료되어 배율이 폭증하지만, 스페인령 은광 탐사선단엔 긴장감이 돕니다.";
+                    } else {
+                        ships.H.currentProb += 15;
+                        ethicalScore += 2;
+                        return "법과 규율을 수호합니다. 평화를 사랑하는 구항로 상단 연합의 지지를 획득하여 안정성이 크게 높아집니다.";
+                    }
+                }
+            },
+            {
+                title: "[운영 돌발] 사탕수수 강제 농장의 가혹한 학대 파동",
+                desc: "지나친 혹사로 카리브해 사탕수수 플랜테이션의 원주민 인력 파업과 대량 폐사가 일어났습니다. 구호 방역 기금 조달 요청이 빗발칩니다.",
+                opt1: "구호 구휼금 100 레알을 긴급 기부한다. [설탕 배율 소폭 조율, 성공 확률 15% 복구]",
+                opt2: "노동력은 소모품일 뿐! 자본을 잠근다. [가치 유지, 단 분노한 수확조 파업으로 성공확률 폭락]",
+                action: (choice) => {
+                    if (choice === 1) {
+                        if (cash < 100) return "구호금을 지출할 여유 자금이 부족합니다.";
+                        cash -= 100;
+                        ships.G.currentProb += 15;
+                        ships.G.currentMult -= 0.3;
+                        ethicalScore += 2;
+                        return "인도주의적 조치 완료. 시설을 방역하고 약품을 보급해 사탕수수 농장에 다시 생기가 돌기 시작합니다.";
+                    } else {
+                        ships.G.currentProb -= 25;
+                        ethicalScore -= 3;
+                        return "구휼 전면 거부. 참혹한 수탈에 격분한 노역자들의 무장 태업이 시작되어 카리브 항로가 마비 상태에 빠집니다.";
+                    }
+                }
+            },
+            {
+                title: "[유통 돌발] 수입 후추 내 돌가루 혼입 위조 사태 발각",
+                desc: "인도 후추 상단에서 무게를 불법 증량하기 위해 수입 후추포대에 하얀 백색 돌가루를 대량 섞어 판 악덕 밀무역이 들통났습니다.",
+                opt1: "품질 인증 자정 검사소 건립에 100 레알 지불. [후추 시세 신뢰 대폭 부활]",
+                opt2: "오리발을 내밀며 덤핑 폭탄 세일로 털어낸다. [현금 100 레알 급조, 후추선 가치는 대폭락]",
+                action: (choice) => {
+                    if (choice === 1) {
+                        if (cash < 100) return "자정이 시급하나 수수료를 지출할 잔금이 모자랍니다.";
+                        cash -= 100;
+                        ships.A.currentProb += 20;
+                        ships.A.currentMult += 0.4;
+                        ethicalScore += 2;
+                        return "정직은 최고의 브랜드! 검증 마크를 획득한 산타 마리아 호의 후추는 리스본 왕실 전매품으로 승격됩니다.";
+                    } else {
+                        cash += 100;
+                        ships.A.currentMult = 0.5;
+                        ships.A.currentProb -= 30;
+                        ethicalScore -= 4;
+                        return "속임수 털어내기 성공! 당장 속여서 100 레알을 벌었으나 사기 행각이 퍼져 산타 마리아의 시세 가치는 영구 박탈됩니다.";
+                    }
+                }
+            },
+            {
+                title: "[치안 돌발] 새로운 무법 수급책 '강제 징집(Press-ganging)' 논란",
+                desc: "길고 가혹한 항해로 탈영 선원이 급증하자, 밤거리에 술취해 쓰러진 청년들을 무단으로 납치해 배의 노잡이로 밀어넣는 수급 조례안이 도마에 올랐습니다.",
+                opt1: "공식 인권 성명을 발표하며 반대한다. [식량 원정 등 비폭력 평화 선박 안전성 급등]",
+                opt2: "일손 채우기가 먼저! 강력 지지 표명. [장거리 심해 원정대의 인력 공백 보강 및 확률 상승]",
+                action: (choice) => {
+                    if (choice === 1) {
+                        ships.D.currentProb += 15;
+                        ethicalScore += 2;
+                        return "상인 윤리 수호! 선원들에게 정당한 사기를 고양하여 안전 식량 보급 수송선이 대단히 명예를 얻게 됩니다.";
+                    } else {
+                        ships.F.currentProb += 20;
+                        ships.B.currentProb += 15;
+                        ethicalScore -= 2;
+                        return "선박 출항 무조건 강행! 인권 무시 강제 징집 덕에 조난 직전이던 마젤란 선단과 드레이크선의 돛대가 마침내 복구됩니다.";
+                    }
+                }
+            },
+            {
+                title: "[정치 돌발] 왕실 전속 수석 어의와의 극비 전매 로비",
+                desc: "궁중의 수석 어의가 우리 상선의 아시아 후추와 향신료를 황실 장수 한방 약품 원료로 단독 추천해주겠다며 전제 수수료를 귀띔합니다.",
+                opt1: "왕실 제휴 뇌물 150 레알을 상납한다. [산타 마리아 호 후추 주가 대폭발]",
+                opt2: "뇌물 로비는 거절하며 정공법 투찰에 임한다. [변동 없이 기본 시세 수치 유지]",
+                action: (choice) => {
+                    if (choice === 1) {
+                        if (cash < 150) return "상납금을 지불할 수 없어 왕실 어의와의 담합은 어둠 속으로 묻혔습니다.";
+                        cash -= 150;
+                        ships.A.currentMult += 1.5;
+                        return "은밀한 동맹 성공! 황실에서 매일 우리 후추를 의무 처방하기로 지시하여 산타 마리아 호의 지분 단가는 영광스러운 궤도에 진입합니다.";
+                    } else {
+                        return "투명한 윤리적 경쟁을 선택했습니다. 비록 로비 계약은 탈락했으나 청렴한 평판이 보존됩니다.";
+                    }
+                }
+            },
+            {
+                title: "[연합 돌발] 이탈리아 베네치아 전통 상인 길드의 합병 권유",
+                desc: "지중해의 전통 직물 연맹 거장 피에트로가 우리 상선단에 극비 편지를 보내 지중해 가공 시장 독점 카르텔을 공동 구축하자고 역제안했습니다.",
+                opt1: "길드 회비 50 레알을 지출하고 합류한다. [지중해 전통 직물 배율 +1.0 상승]",
+                opt2: "대세는 대서양 신항로다! 제안을 일축한다. [신대륙 식량 및 은 원정선단 가치 대폭 버프]",
+                action: (choice) => {
+                    if (choice === 1) {
+                        if (cash < 50) return "합류 자금이 모자라 카르텔 결성 합의가 백지화되었습니다.";
+                        cash -= 50;
+                        ships.H.currentMult += 1.0;
+                        return "전통의 지배자 합류 완료! 레반트의 별 호가 안정적 직물 단가를 영구 방어해 높은 배당률을 정복합니다.";
+                    } else {
+                        ships.C.currentMult += 0.5;
+                        ships.D.currentMult += 0.3;
+                        return "우리의 고향은 더 넓은 대양입니다! 거절에 당황한 길드 세력 대신 대서양 은광과 보급선이 강력한 탄력을 입습니다.";
+                    }
+                }
+            },
+            {
+                title: "[신대륙 돌발] 남아메리카 아즈텍 수장의 인권 청원 딜",
+                desc: "에스파냐 점령군 총독의 폭거에 분개한 원주민 대수장이 우리에게 무기 폭로 서한을 황실 의회에 중개 제출해주는 대가로 고도의 사탕수수 유기 정제 비법을 넘기겠다고 전해왔습니다.",
+                opt1: "원주민들의 억울함을 대변해 서한을 제출한다. [도덕지수 폭증, 설탕 주가 대폭등, 단 제국 군대 은광산 탄압 반발]",
+                opt2: "공무원 군대의 심기를 건드릴 수 없다. 외면한다. [설탕 가치 폭락, 제국 전함 보호로 은 광산 성공확률 증가]",
+                action: (choice) => {
+                    if (choice === 1) {
+                        ships.G.currentMult += 1.0;
+                        ships.C.currentProb -= 15;
+                        ethicalScore += 3;
+                        return "정론 폭로 서명! 세계 양심가들의 기부로 이스파뇰라 설탕은 명품 오가닉 칭호를 얻지만, 군대의 방해로 은 광산 수송단은 위기에 몰립니다.";
+                    } else {
+                        ships.C.currentProb += 15;
+                        ships.G.currentProb -= 20;
+                        ethicalScore -= 3;
+                        return "총독과의 연합 수호. 제국 무장 병력의 삼엄한 가드로 은 원정 전함은 활기를 찾지만 고통받는 카리브 설탕 농가는 침통해집니다.";
+                    }
+                }
+            },
+            {
+                title: "[구호 돌발] 산 프란시스코 호의 심해 행방불명 조난",
+                desc: "감자와 식량을 만재하고 유럽으로 귀항하던 산 프란시스코 호가 중간 해역 폭풍 속에서 실종되는 해난사고가 일어났습니다. 구난대를 파견해야 합니다.",
+                opt1: "의리를 지켜 특별 수색선 수수료 80 레알 지원. [구황작물선 성공률 즉시 완벽 회복]",
+                opt2: "자연 재해에 투자는 무익! 포기하고 손실 감수. [구황작물 원정선 성공률 영구 반토막 파산]",
+                action: (choice) => {
+                    if (choice === 1) {
+                        if (cash < 80) return "수색대를 파견할 80 레알이 수중에 소지되어 있지 않습니다.";
+                        cash -= 80;
+                        ships.D.currentProb = Math.min(95, ships.D.currentProb + 15);
+                        return "구난에 기적적으로 성공했습니다! 조난되었던 선원들이 안전하게 구출되며 안전 자산의 위상을 공고히 입증합니다.";
+                    } else {
+                        ships.D.currentProb = Math.max(20, ships.D.currentProb - 35);
+                        return "구조 수색 포기. 표류하던 산 프란시스코 호는 암초 구역에 정면 충돌하며 성공률과 장기 가치선이 파멸해갑니다.";
+                    }
+                }
+            }
+        ];
+
+        // 30개 동향 일반 리스트 보정 확장 (기존의 정의되지 않은 normalSituations를 situations로 일관되게 정정)
+        // 추가 호재 상황 10개
+        situations.push(
+            {
+                title: "리스본-아프리카 무역 협정 체결",
+                desc: "포르투갈 왕실과 서아프리카 현지 수장들 사이에 안정적 무역 협정이 공식 체결되었습니다. 향료와 후추 수급로가 보장되어 주요 원양 선단의 항로 안전성이 대폭 높아집니다. 특히 인도 항로와 향료 제도를 향하는 선단에 긍정적인 바람이 불고 있습니다.",
+                impact: (s) => {
+                    s.A.currentProb += 15; s.A.currentMult += 0.3;
+                    s.B.currentProb += 10; s.B.currentMult += 0.4;
+                    s.F.currentProb += 8;
+                }
+            },
+            {
+                title: "스페인-포르투갈 해상 동맹 강화",
+                desc: "토르데시야스 조약 재확인으로 스페인과 포르투갈 양국이 해상 무역로를 상호 보호하기로 합의했습니다. 공동 해군 순찰대가 대서양 항로를 보호하면서 전체 선단의 안전 항해율이 크게 향상되었습니다.",
+                impact: (s) => {
+                    s.C.currentProb += 12; s.D.currentProb += 10;
+                    s.G.currentProb += 12; s.H.currentProb += 8;
+                }
+            },
+            {
+                title: "신항로 지도 개선 - 항해사 길드 배포",
+                desc: "베네치아와 리스본의 지도 제작 길드가 신규 해상 지도를 각 선단에 배포했습니다. 정확한 항로 정보로 조난 위험이 낮아지고 목적지 도착률이 일제히 상승했습니다. 특히 장거리 원양 항로에서 효과가 두드러집니다.",
+                impact: (s) => {
+                    s.F.currentProb += 20; s.B.currentProb += 15;
+                    s.C.currentProb += 10; s.A.currentProb += 8;
+                }
+            },
+            {
+                title: "유럽 귀족층 동방 물품 사치품 열풍",
+                desc: "이탈리아와 프랑스 귀족 사회에 동방 물품 수집 열풍이 불고 있습니다. 비단, 도자기, 향신료가 귀족의 권위를 상징하는 사치품으로 급부상하며 가격이 폭등하고 있습니다.",
+                impact: (s) => {
+                    s.F.currentMult += 1.2; s.B.currentMult += 0.8;
+                    s.A.currentMult += 0.6; s.F.currentProb += 5;
+                }
+            },
+            {
+                title: "신대륙 감자 대풍작 보고",
+                desc: "안데스 고원 지대에서 감자의 대규모 재배가 성공적으로 이루어졌다는 보고가 들어왔습니다. 유럽으로의 안정적 공급 가능성이 높아지며 구황작물 선단의 수익성 전망이 밝아졌습니다.",
+                impact: (s) => {
+                    s.D.currentMult += 0.6; s.D.currentProb += 15;
+                    s.C.currentProb += 8;
+                }
+            },
+            {
+                title: "교황청 인도 무역 특별 허가 칙서 발행",
+                desc: "교황 알렉산데르 6세가 포르투갈의 인도 직항로 무역에 특별 신성 허가를 내렸습니다. 종교적 정당성을 얻은 선단들이 더 자신감 있게 항해를 펼치며, 현지 교역 거부 위험도 낮아졌습니다.",
+                impact: (s) => {
+                    s.A.currentProb += 18; s.A.currentMult += 0.4;
+                    s.B.currentProb += 10;
+                }
+            },
+            {
+                title: "동남아 술탄국과 향료 직거래 성사",
+                desc: "몰루카 제도 현지 술탄과의 직거래 협상이 극적으로 타결되었습니다. 중간 상인을 배제한 직접 무역으로 정향·육두구의 원가가 크게 낮아지고 배당 마진이 대폭 상승할 것으로 기대됩니다.",
+                impact: (s) => {
+                    s.B.currentMult += 1.5; s.B.currentProb += 12;
+                }
+            },
+            {
+                title: "대서양 무역풍 예측 성공 - 쾌속 항해 예보",
+                desc: "포르투갈 왕립 항해 연구소가 대서양 무역풍 주기를 정확히 예측하는 데 성공했습니다. 모든 대서양 선단이 이 정보를 활용해 항해 기간을 단축하고 물품 손상 위험도 줄일 수 있게 되었습니다.",
+                impact: (s) => {
+                    s.C.currentProb += 12; s.D.currentProb += 10;
+                    s.G.currentProb += 12; s.E.currentProb += 8;
+                }
+            },
+            {
+                title: "카리브해 설탕 정제 기술 혁신",
+                desc: "쿠바 농장에서 새로운 원심분리 정제법이 개발되어 설탕 생산량이 종전의 두 배 이상으로 늘었습니다. 유럽 수출량도 급증하며 이스파뇰라 호의 수익 배율이 의미 있게 상승했습니다.",
+                impact: (s) => {
+                    s.G.currentMult += 0.8; s.G.currentProb += 12;
+                }
+            },
+            {
+                title: "지중해 해적 소탕 작전 성공",
+                desc: "베네치아 공화국과 스페인 해군이 연합 작전으로 바르바리 해적단 주력을 격파했습니다. 지중해 항로가 안전해지며 전통 직물 무역의 리스크가 크게 줄었고, 신항로 선단도 지중해 구간 통과가 수월해졌습니다.",
+                impact: (s) => {
+                    s.H.currentProb += 20; s.H.currentMult += 0.4;
+                    s.A.currentProb += 8; s.F.currentProb += 6;
+                }
+            }
+        );
+
+        while(situations.length < 40) {
+            situations.push({
+                title: `[글로벌 시황] 대서양 정세 무역 긴급 변화 통보`,
+                desc: `계절풍과 조류의 흐름 주기가 빠르게 변화하여 지중해, 아시아, 신대륙의 모든 해상 길목 시세가 출렁입니다. 전체 주가의 긴장도가 재보정됩니다.`,
+                mainShip: ['A','B','C','D','E','F','G','H'][Math.floor(Math.random()*8)],
+                probMod: Math.random() > 0.5 ? 8 : -8,
+                payMod: Math.random() > 0.5 ? 0.2 : -0.1
+            });
+        }
+
+        // ----------------------------------------------------
+        // CORE CALCULATION LOGIC
+        // ----------------------------------------------------
+        function calculateSharePrice(ship) {
+            if (currentRound === 0) {
+                return 50; // 준비 단계에서는 무조건 50레알 고정가 보장
+            }
+            if (ship._ruined) return 0; // 망한 선박은 주가 0
+            const probFactor = ship.currentProb / ship.baseProb;
+            const multFactor = ship.currentMult / ship.baseMult;
+            let price = Math.round(50 * probFactor * multFactor);
+            return Math.max(1, price);
+        }
+
+        function calculateTotalAssets() {
+            let totalSharesValue = 0;
+            for (const shipId in portfolio) {
+                totalSharesValue += portfolio[shipId] * calculateSharePrice(ships[shipId]);
+            }
+            return Math.round(cash + totalSharesValue);
+        }
+
+        // ----------------------------------------------------
+        // SCREEN TRANSITION WORKFLOW
+        // ----------------------------------------------------
+        function startGame() {
+            const classVal = document.getElementById('input-player-class').value.trim();
+            const numberVal = document.getElementById('input-player-number').value.trim();
+            const nameVal = document.getElementById('input-player-name').value.trim();
+            const pwVal = document.getElementById('input-player-pw').value.trim();
+            const errorEl = document.getElementById('player-form-error');
+            const pwHint = document.getElementById('pw-hint');
+
+            if (!classVal || !numberVal || !nameVal || !pwVal) {
+                errorEl.classList.remove('hidden');
+                showCustomAlert("반, 번호, 이름, 비밀번호를 모두 입력해야 출항할 수 있습니다!");
+                return;
+            }
+            if (pwVal.length < 4) {
+                errorEl.classList.remove('hidden');
+                showCustomAlert("비밀번호는 4자리 이상이어야 합니다!");
+                return;
+            }
+            errorEl.classList.add('hidden');
+
+            // 비밀번호 검증 (localStorage)
+            const pwKey = `aov_pw_${classVal}_${numberVal}_${nameVal}`;
+            const storedPw = localStorage.getItem(pwKey);
+            if (storedPw === null) {
+                // 최초 등록
+                localStorage.setItem(pwKey, pwVal);
+                pwHint.textContent = "✅ 비밀번호가 등록되었습니다. 다음 플레이 시 동일한 비밀번호를 입력하세요.";
+                pwHint.className = "text-[11px] text-emerald-400 mt-1";
+                pwHint.classList.remove('hidden');
+            } else if (storedPw !== pwVal) {
+                pwHint.textContent = "❌ 비밀번호가 맞지 않습니다. 이 계정으로 플레이하려면 올바른 비밀번호를 입력하세요.";
+                pwHint.className = "text-[11px] text-rose-400 mt-1";
+                pwHint.classList.remove('hidden');
+                showCustomAlert("비밀번호가 올바르지 않습니다!");
+                return;
+            } else {
+                pwHint.textContent = "✅ 비밀번호 확인 완료";
+                pwHint.className = "text-[11px] text-emerald-400 mt-1";
+                pwHint.classList.remove('hidden');
+            }
+
+            playerClass = classVal;
+            playerNumber = numberVal;
+            playerName = nameVal;
+
+            playSound('click');
+            document.getElementById('screen-lobby').classList.add('hidden');
+            document.getElementById('screen-game').classList.remove('hidden');
+            document.getElementById('main-header').style.display = 'flex';
+            
+            currentRound = 0; // 준비단계 (Round 0) 진입
+            generateForecastCards(); // 1라운드로 넘어갈 때 적용될 첫 예측 카드 생성
+            
+            // 준비 단계 선제 신문 띄우기
+            showNewspaperModal(true, false);
+            updateUI();
+        }
+
+        function showCustomAlert(msg) {
+            const alertBox = document.getElementById('game-alert');
+            const alertText = document.getElementById('game-alert-text');
+            alertText.textContent = msg;
+            alertBox.classList.remove('hidden');
+            
+            setTimeout(() => {
+                alertBox.classList.add('hidden');
+            }, 3000);
+        }
+
+        // ----------------------------------------------------
+        // STOCK TRANSACTION CONTROL (1주 단위 매수/매도, 평단가 추적)
+        // ----------------------------------------------------
+        function buyShares(shipId) {
+            const currentPrice = calculateSharePrice(ships[shipId]);
+
+            if (cash < currentPrice) {
+                showCustomAlert(`투자 가능한 현금이 부족합니다! (1주당 ${currentPrice} 레알 필요)`);
+                return;
+            }
+
+            if (ships[shipId].isUnethical) {
+                totalInvestedInUnethical += currentPrice;
+                hasUnethicalInvestedNow = true;
+            }
+
+            // 1주 매수 처리
+            cash -= currentPrice;
+            totalCostBasis[shipId] += currentPrice;
+            portfolio[shipId] += 1;
+            avgCost[shipId] = totalCostBasis[shipId] / portfolio[shipId];
+            buyActionCount++;
+
+            const totalWealth = calculateTotalAssets();
+            const shipAssetVal = portfolio[shipId] * currentPrice;
+            const ratio = totalWealth > 0 ? shipAssetVal / totalWealth : 0;
+            if (ratio > maxSingleShipRatio) maxSingleShipRatio = ratio;
+            if (shipAssetVal >= totalWealth * 0.85 && totalWealth > 1000) {
+                hasAllInHistory = true;
+            }
+
+            playSound('buy');
+            updateUI();
+        }
+
+        function sellShares(shipId) {
+            if (portfolio[shipId] <= 0) {
+                showCustomAlert("보유하고 계신 이 선단의 주식이 없습니다!");
+                return;
+            }
+
+            const currentPrice = calculateSharePrice(ships[shipId]);
+
+            // 1주 매도 처리 (평단가 비례 차감)
+            const costPerShare = avgCost[shipId];
+            portfolio[shipId] -= 1;
+            totalCostBasis[shipId] -= costPerShare;
+            cash += currentPrice;
+            sellActionCount++;
+
+            if (portfolio[shipId] <= 0.0001) {
+                portfolio[shipId] = 0;
+                totalCostBasis[shipId] = 0;
+                avgCost[shipId] = 0;
+                if (ships[shipId].isUnethical) {
+                    hasUnethicalInvestedNow = false;
+                }
+            }
+
+            playSound('sell');
+            updateUI();
+        }
+
+        function sellAllOfShip(shipId) {
+            if (portfolio[shipId] <= 0) return;
+            const currentPrice = calculateSharePrice(ships[shipId]);
+            const totalSellAmount = portfolio[shipId] * currentPrice;
+            cash += totalSellAmount;
+            portfolio[shipId] = 0;
+            totalCostBasis[shipId] = 0;
+            avgCost[shipId] = 0;
+            sellActionCount++;
+
+            if (ships[shipId].isUnethical) {
+                hasUnethicalInvestedNow = false;
+            }
+
+            playSound('sell');
+            updateUI();
+        }
+
+        function sellAllAssets() {
+            let totalSold = 0;
+            for (const shipId in portfolio) {
+                if (portfolio[shipId] > 0) {
+                    const currentPrice = calculateSharePrice(ships[shipId]);
+                    totalSold += portfolio[shipId] * currentPrice;
+                    portfolio[shipId] = 0;
+                    totalCostBasis[shipId] = 0;
+                    avgCost[shipId] = 0;
+                }
+            }
+            if (totalSold > 0) {
+                cash += totalSold;
+                hasUnethicalInvestedNow = false;
+                sellActionCount++;
+                showCustomAlert(`포트폴리오 전액 매각 완료! ${Math.round(totalSold).toLocaleString()} 레알이 현금으로 반환되었습니다.`);
+                playSound('sell');
+                updateUI();
+            } else {
+                showCustomAlert("현재 보유 중인 상선 주식이 존재하지 않습니다!");
+            }
+        }
+
+        // ----------------------------------------------------
+        // NEXT SITUATION FORECAST SYSTEM (다음 정세 예측 카드 4개 : 40/30/20/10%)
+        // ----------------------------------------------------
+        const FORECAST_WEIGHTS = [30, 25, 25, 20];
+        let currentForecastPool = []; // [{situation, weight}, ...] 현재 라운드에서 예고된 4개 후보
+
+        // 이미 발생한 상황 추적 (플레이 중 중복 방지) - generateForecastCards보다 먼저 선언 필수
+        let usedSituationTitles = new Set();
+
+        // 다음에 나올 수 있는 상황 후보 4개를 무작위로 뽑아 확률을 부여하고 카드로 보여줌
+        function generateForecastCards() {
+            // 아직 사용되지 않은 상황만 후보로
+            const pool = situations.filter(s => !usedSituationTitles.has(s.title));
+            const src = pool.length >= 4 ? pool : [...situations]; // 다 소진되면 전체에서
+            const picks = [];
+            const temp = [...src];
+            for (let i = 0; i < 4 && temp.length > 0; i++) {
+                const idx = Math.floor(Math.random() * temp.length);
+                picks.push(temp.splice(idx, 1)[0]);
+            }
+            currentForecastPool = picks.map((sit, i) => ({ situation: sit, weight: FORECAST_WEIGHTS[i] }));
+            renderForecastCards();
+        }
+
+        // 예고된 후보 중, 부여된 확률(가중치)에 따라 실제로 발생할 다음 상황 1개를 추첨
+        function drawWeightedSituation() {
+            if (currentForecastPool.length === 0) {
+                return situations.find(s => !usedSituationTitles.has(s.title)) || situations[0];
+            }
+            // 이미 사용된 상황 제외
+            const available = currentForecastPool.filter(p => !usedSituationTitles.has(p.situation.title));
+            const pool = available.length > 0 ? available : currentForecastPool;
+            const totalWeight = pool.reduce((sum, p) => sum + p.weight, 0);
+            let roll = Math.random() * totalWeight;
+            let chosen = pool[0].situation;
+            for (const p of pool) {
+                if (roll < p.weight) { chosen = p.situation; break; }
+                roll -= p.weight;
+            }
+            usedSituationTitles.add(chosen.title);
+            return chosen;
+        }
+
+        function renderForecastCards() {
+            const container = document.getElementById('forecast-cards-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (currentForecastPool.length === 0) {
+                container.innerHTML = `<p class="col-span-2 text-slate-500 text-[11px] text-center py-4">다음 라운드로 넘어가면 첩보가 갱신됩니다.</p>`;
+                return;
+            }
+
+            const colorMap = [
+                { badge: 'bg-rose-500/20 text-rose-300 border-rose-500/30', bar: 'bg-rose-500' },
+                { badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30', bar: 'bg-amber-500' },
+                { badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30', bar: 'bg-blue-500' },
+                { badge: 'bg-slate-500/20 text-slate-300 border-slate-500/30', bar: 'bg-slate-400' }
+            ];
+
+            currentForecastPool.forEach((p, idx) => {
+                const c = colorMap[idx] || colorMap[3];
+                const safeDesc = (p.situation.desc || '').replace(/`/g, "'");
+                // 상단 행(0,1)은 툴팁이 아래로, 하단 행(2,3)은 위로
+                const tooltipPos = (idx < 2)
+                    ? 'top: calc(100% + 6px); bottom: auto;'
+                    : 'bottom: calc(100% + 6px); top: auto;';
+                const cardHTML = `
+                    <div class="forecast-card-wrap bg-slate-900/70 border border-slate-800 rounded-lg p-1.5 flex flex-col gap-0.5 cursor-help">
+                        <div class="forecast-tooltip" style="${tooltipPos}">${safeDesc}</div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-black px-1.5 py-0.5 rounded border ${c.badge}">${p.weight}% 확률</span>
+                        </div>
+                        <p class="text-[11px] font-bold text-slate-200 leading-tight line-clamp-2">${p.situation.title}</p>
+                        <div class="w-full h-1 bg-slate-800 rounded-full overflow-hidden mt-0.5">
+                            <div class="${c.bar} h-full" style="width:${p.weight}%"></div>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', cardHTML);
+            });
+        }
+
+
+        // 돌발 상황은 "라운드"가 아니라 라운드 사이에 끼는 별도 막간 이벤트입니다.
+        // 따라서 eventRounds에 도달해도 currentRound는 증가하지 않고,
+        // 돌발 사태를 먼저 처리한 뒤 같은 라운드의 정세 소식지를 이어서 보여줍니다.
+        const eventRounds = [3, 6, 8]; // 이 라운드로 "넘어가기 직전"에 돌발 막간극 발생 (10라운드 기준 재조정)
+        let availableEvents = [...suddenEvents];
+        let currentActiveEvent = null;
+        let triggeredEventRounds = []; // 이미 돌발 막간극을 소비한 라운드 기록 (중복 방지)
+        let pendingRoundAfterEvent = null; // 돌발 이벤트 종료 후 이어서 진행할 라운드 번호
+
+        function proceedNextRound() {
+            playSound('click');
+
+            // 돌발 상황 처리 중인 경우 (돌발 투자 화면 -> 다음 라운드)
+            if (window._pendingEventRound !== undefined && window._pendingEventRound !== null) {
+                const targetRound = window._pendingEventRound;
+                window._pendingEventRound = null;
+                currentRound = targetRound;
+                showNewspaperModal(false, false);
+                return;
+            }
+            
+            let confirmMsg = "";
+            if (currentRound === 0) {
+                confirmMsg = "초기 포트폴리오 구성을 마감하고 본격적으로 정세 변화가 시작되는 [제 1라운드] 소식지를 인쇄하시겠습니까?";
+            } else if (currentRound === TOTAL_ROUNDS) {
+                confirmMsg = `모든 ${TOTAL_ROUNDS}라운드 모험 투자가 마감되었습니다. 최종 대항해 출항 결과 시뮬레이션을 돌리시겠습니까?`;
+            } else {
+                confirmMsg = `현재 라운드 투자를 매듭짓고 제 ${currentRound + 1}라운드의 세계 정세 소식지를 받아보시겠습니까?`;
+            }
+
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+
+            if (currentRound >= TOTAL_ROUNDS) {
+                startVoyageResolution();
+                return;
+            }
+
+            const nextRound = currentRound + 1;
+
+            // 돌발 막간극 발생 여부 판단 (라운드 수에는 포함되지 않음)
+            const shouldTriggerEvent = eventRounds.includes(nextRound) && !triggeredEventRounds.includes(nextRound);
+
+            if (shouldTriggerEvent) {
+                triggeredEventRounds.push(nextRound);
+                pendingRoundAfterEvent = nextRound; // 돌발극 종료 후 이 라운드로 진입
+                showNewspaperModal(false, true);
+            } else {
+                currentRound = nextRound;
+                showNewspaperModal(false, false);
+            }
+        }
+
+        // 전면 신문/소식지 열기 (상단에 오버레이 레이어 출력)
+        function showNewspaperModal(isFirstPrep = false, isEvent = false) {
+            const overlay = document.getElementById('newspaper-modal');
+            const titleEl = document.getElementById('news-modal-title');
+            const descEl = document.getElementById('news-modal-desc');
+            const dateEl = document.getElementById('news-modal-date');
+            const roundEl = document.getElementById('news-modal-round');
+            const optionsContainer = document.getElementById('news-modal-options');
+            const closeBtn = document.getElementById('btn-close-newspaper');
+
+            overlay.classList.remove('hidden');
+            dateEl.innerText = `연도: ${1500 + currentRound * 3}년`;
+
+            if (isFirstPrep) {
+                // 게임 첫 진입 0라운드 준비안내문
+                roundEl.innerText = "출항 준비 단계";
+                titleEl.innerText = "⚓ 최초의 자본 투자 연합 선단, 기어코 발족!";
+                descEl.innerText = "유럽 최고의 리스본 선창가에 황금과 향료, 은광석의 꿈을 한몸에 담은 8척의 상선단이 집결했습니다. 국왕 승인 하에 시세가 동결된 '출항 준비 단계'가 개시됩니다. 모든 주식은 50레알 균일가이오니 편안하게 첫 분산 자금을 영리하게 안배하십시오.";
+                optionsContainer.classList.add('hidden');
+                closeBtn.classList.remove('hidden');
+                closeBtn.innerText = "투자 배치 시작하기";
+                return;
+            }
+
+            if (isEvent) {
+                // 돌발 국면 대처 이벤트 (라운드 번호 미포함 - "돌발 상황"으로만 표시)
+                roundEl.innerHTML = `<span class="text-rose-700">⚡ 돌발 상황 발생</span>`;
+
+                if (availableEvents.length === 0) {
+                    availableEvents = [...suddenEvents];
+            usedSituationTitles = new Set();
+            window._pendingEventRound = null;
+                }
+                const randIdx = Math.floor(Math.random() * availableEvents.length);
+                currentActiveEvent = availableEvents.splice(randIdx, 1)[0];
+
+                titleEl.innerHTML = `<span class="text-rose-600 block text-sm font-black uppercase tracking-widest"><i class="fa-solid fa-triangle-exclamation"></i> 국가 돌발 사태</span>${currentActiveEvent.title}`;
+                descEl.innerText = currentActiveEvent.desc;
+
+                document.getElementById('modal-opt1').textContent = currentActiveEvent.opt1;
+                document.getElementById('modal-opt2').textContent = currentActiveEvent.opt2;
+
+                optionsContainer.classList.remove('hidden');
+                closeBtn.classList.add('hidden'); // 돌발 사태에 선택지를 강제 대처 완료하기 전까진 투자창에 갈 수 없게 제한
+
+                playSound('event');
+            } else {
+                roundEl.innerText = `ROUND ${currentRound} / ${TOTAL_ROUNDS}`;
+
+                // 일반 정세 동향 호외 기사
+                optionsContainer.classList.add('hidden');
+                closeBtn.classList.remove('hidden');
+                closeBtn.innerText = "상황 대처하기 (투자창 열기)";
+
+                const sit = drawWeightedSituation();
+
+                titleEl.innerHTML = `<span class="text-amber-700 block text-sm font-black uppercase tracking-widest"><i class="fa-solid fa-newspaper"></i> 세계 정세 신문 기사</span>${sit.title}`;
+
+                // 정세 변화 적용 전 스냅샷 (영향 전후 비교로 쉬운 설명 자동 생성)
+                const beforeSnapshot = JSON.parse(JSON.stringify(ships));
+
+                // 정세 변화 적용 (변동폭 2배: 한 번 더 impact 적용)
+                sit.impact(ships);
+                sit.impact(ships); // 2배 임팩트로 도파민 강화
+
+                // 정세 변화 발생 시 메인 외 다른 7척 포함 모든 선박의 가치 동반 자동 변동
+                applyGlobalMarketFluctuations(sit.mainShip);
+                // 추가 글로벌 변동 (더 극적인 시세 변화)
+                applyGlobalMarketFluctuations(null);
+
+                // 값 하한선 상한선 정렬
+                for (const shipId in ships) {
+                    ships[shipId].currentProb = Math.max(0, Math.min(98, ships[shipId].currentProb));
+                    if (ships[shipId].currentProb <= 0) ships[shipId]._ruined = true;
+                    ships[shipId].currentMult = Math.max(0.3, Math.round(ships[shipId].currentMult * 10) / 10);
+                }
+
+                descEl.innerText = buildDetailedSituationText(sit, beforeSnapshot, ships);
+
+                // 선박별 호재/악재 계산 후 저장
+                for (const sid in ships) {
+                    const bProb = beforeSnapshot[sid].currentProb;
+                    const aProb = ships[sid].currentProb;
+                    const bMult = beforeSnapshot[sid].currentMult;
+                    const aMult = ships[sid].currentMult;
+                    const probScore = aProb - bProb;
+                    const multScore = (aMult - bMult) * 10;
+                    const total = probScore + multScore;
+                    if (total >= 5) shipMarketStatus[sid] = 'good';
+                    else if (total <= -5) shipMarketStatus[sid] = 'bad';
+                    else shipMarketStatus[sid] = 'neutral';
+                }
+
+                // 왼쪽 사이드바 요약 패널 실시간 갱신용 텍스트 매핑
+                document.getElementById('news-type-badge').innerHTML = `<i class="fa-solid fa-newspaper text-amber-500"></i> 세계 정세 신문 기사`;
+                document.getElementById('news-title').textContent = sit.title;
+                document.getElementById('news-desc').textContent = `${sit.desc} (모든 선박 주가가 함께 조금씩 출렁였습니다)`;
+
+                // 다음 정세를 미리 예측해서 보여주는 카드 갱신
+                generateForecastCards();
+
+                playSound('event');
+            }
+        }
+
+        // 라운드 상황 설명을 더 쉽고 구체적인 용어로 풀어서 제공 (가독성/이해도 강화)
+        // impact 적용 전/후 스냅샷을 비교해서, 실제로 어떤 선단이 어떻게(왜) 바뀌었는지 자동으로 풀어서 설명합니다.
+        function buildDetailedSituationText(sit, before, after) {
+            const changedLines = [];
+            for (const shipId in after) {
+                const b = before[shipId];
+                const a = after[shipId];
+                const probDiff = a.currentProb - b.currentProb;
+                const multDiff = Math.round((a.currentMult - b.currentMult) * 10) / 10;
+
+                // 미세 시장 마찰(랜덤 노이즈)은 무시하고, 의미있게 큰 변화만 핵심 설명에 포함 (확률 ±6 이상 또는 배율 ±0.3 이상)
+                if (Math.abs(probDiff) >= 6 || Math.abs(multDiff) >= 0.3) {
+                    const probWord = probDiff > 0 ? `성공할 확률이 ${probDiff}%P 더 높아졌습니다` : `성공할 확률이 ${Math.abs(probDiff)}%P 더 낮아졌습니다`;
+                    const multWord = multDiff !== 0 ? (multDiff > 0 ? `, 성공했을 때 받는 배당도 ${multDiff}배 더 늘었습니다` : `, 성공했을 때 받는 배당도 ${Math.abs(multDiff)}배 줄었습니다`) : "";
+                    if (Math.abs(probDiff) >= 6) {
+                        changedLines.push(`· ${a.name}: ${probWord}${multWord}.`);
+                    } else if (Math.abs(multDiff) >= 0.3) {
+                        changedLines.push(`· ${a.name}: 성공했을 때 받는 배당이 ${multDiff > 0 ? `${multDiff}배 더 늘었습니다` : `${Math.abs(multDiff)}배 줄었습니다`}.`);
+                    }
+                }
+            }
+
+            return sit.desc;
+        }
+
+        // 정세이든 전 선박의 시세에 유기적으로 무작위 마찰 계수 영향 발생시킴
+        function applyGlobalMarketFluctuations(excludeShipId) {
+            for (const shipId in ships) {
+                if (shipId === excludeShipId) continue;
+                
+                // 성공 확률에 -10% ~ +10% 마찰 조정 (도파민 강화)
+                const probDelta = Math.floor(Math.random() * 21) - 10; 
+                ships[shipId].currentProb = Math.max(0, Math.min(98, ships[shipId].currentProb + probDelta));
+
+                // 성공률 0이 되면 영구 손실 (해당 선박 망함 표시)
+                if (ships[shipId].currentProb <= 0) {
+                    ships[shipId].currentProb = 0;
+                    ships[shipId]._ruined = true;
+                }
+
+                // 배율에 -0.3배 ~ +0.4배 마찰 조정 (도파민 강화)
+                const multDelta = (Math.random() * 0.7 - 0.3);
+                ships[shipId].currentMult = Math.max(0.3, Math.round((ships[shipId].currentMult + multDelta) * 10) / 10);
+            }
+        }
+
+        // 신문 모달 속에서 돌발 선택지 선택 처리
+        function handleOptionChoiceInNews(choiceNum) {
+            if (!currentActiveEvent) return;
+
+            // 돈을 지불하는 선택(1번)인데 현금 부족 시 반대 선택으로 자동 전환
+            let effectiveChoice = choiceNum;
+            if (choiceNum === 1 && currentActiveEvent.action.toString().includes('cash -=')) {
+                // action 코드에 'cash -=' 포함 = 돈 지불 선택
+                // 실제 지불 금액 추출 시도
+                const cashMatch = currentActiveEvent.action.toString().match(/cash < (\d+)/);
+                if (cashMatch) {
+                    const required = parseInt(cashMatch[1]);
+                    if (cash < required) {
+                        effectiveChoice = 2;
+                        // 알림
+                        document.getElementById('news-modal-desc').insertAdjacentHTML('beforebegin', 
+                            '<div style="color:#f87171;font-weight:bold;font-size:12px;margin-bottom:6px;">⚠️ 자금 부족으로 자동으로 [선택 2]가 집행됩니다.</div>');
+                    }
+                }
+            }
+
+            const feedback = currentActiveEvent.action(effectiveChoice);
+            
+            // 전 모든 선박의 가치 동반 미세 변동 발생
+            applyGlobalMarketFluctuations(null);
+
+            for (const shipId in ships) {
+                ships[shipId].currentProb = Math.max(0, Math.min(98, ships[shipId].currentProb));
+                if (ships[shipId].currentProb <= 0) ships[shipId]._ruined = true;
+                ships[shipId].currentMult = Math.max(0.3, Math.round(ships[shipId].currentMult * 10) / 10);
+            }
+
+            // 기사 내용을 선택 대처 피드백으로 변경
+            document.getElementById('news-modal-desc').innerHTML = `<span class="text-amber-700 font-bold block mb-1"><i class="fa-solid fa-check-double"></i> 투자자 의결 집행 보고:</span> ${feedback}`;
+            document.getElementById('news-modal-options').classList.add('hidden');
+            
+            // 닫기 버튼을 노출시켜서 대처 결과 확인 후 거래창으로 가도록 유도
+            const closeBtn = document.getElementById('btn-close-newspaper');
+            closeBtn.classList.remove('hidden');
+            closeBtn.innerText = "상황 대처 완료 (투자창 열기)";
+
+            // 왼쪽 요약 패널도 동일한 결재 결과 기록으로 동기화
+            document.getElementById('news-type-badge').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-500 animate-pulse"></i> 돌발 사태 결재 대처 완료`;
+            document.getElementById('news-title').textContent = currentActiveEvent.title;
+            document.getElementById('news-desc').textContent = feedback;
+
+            currentActiveEvent = null;
+            updateUI();
+        }
+
+        // 신문 모달 닫기
+        function closeNewspaperModal() {
+            const wasEventModal = pendingRoundAfterEvent !== null;
+
+            document.getElementById('newspaper-modal').classList.add('hidden');
+            
+            // Record history for Area Trend Sparkline
+            for (const shipId in ships) {
+                const price = calculateSharePrice(ships[shipId]);
+                ships[shipId].history.push(price);
+                if (ships[shipId].history.length > 7) {
+                    ships[shipId].history.shift();
+                }
+            }
+
+            renderShipsGrid(); // history push 직후 트렌드 그래프 갱신을 위해 1차 렌더
+            updateUI(); // updateUI 내부에서도 renderShipsGrid를 다시 호출해 최신 상태 보장
+
+            // 돌발 막간극이 끝난 직후라면, 투자 화면에서 대처 후 버튼으로 다음 라운드 진행
+            if (wasEventModal) {
+                // 라운드 표시를 "돌발 상황 대처"로
+                document.getElementById('dashboard-round').textContent = "돌발 상황 대처";
+                document.getElementById('dashboard-round').className = "text-rose-400 font-bold animate-pulse";
+                // 다음 라운드 버튼 텍스트 변경
+                const nextBtnSpan = document.getElementById('btn-next-round').querySelector('span');
+                if (nextBtnSpan) nextBtnSpan.textContent = `${pendingRoundAfterEvent}라운드 정세 확인하기`;
+                // isEventPending 플래그 설정해서 다음 버튼 클릭 시 처리
+                window._pendingEventRound = pendingRoundAfterEvent;
+                pendingRoundAfterEvent = null;
+            }
+        }
+
+        // ----------------------------------------------------
+        // UI & CARD RENDERING (완벽한 스크롤 방지 4x2 자동 계산 격자)
+        // ----------------------------------------------------
+        function renderShipsGrid() {
+            const grid = document.getElementById('ships-grid');
+            grid.innerHTML = '';
+
+            for (const shipId in ships) {
+                const s = ships[shipId];
+                const currentPrice = calculateSharePrice(s);
+                const holdingVal = portfolio[shipId] * currentPrice;
+                const isOwned = portfolio[shipId] > 0;
+                const myAvgCost = avgCost[shipId] || 0;
+
+                // 손익 계산: 평단가 대비 현재가 비교 → 이득(빨강) / 손해(파랑)
+                let pnlClass = "pnl-flat";
+                let pnlText = "-";
+                let pnlIcon = "";
+                if (isOwned && myAvgCost > 0) {
+                    const pnlAmount = (currentPrice - myAvgCost) * portfolio[shipId];
+                    const pnlPct = ((currentPrice - myAvgCost) / myAvgCost) * 100;
+                    if (pnlAmount > 0.5) {
+                        pnlClass = "pnl-profit";
+                        pnlIcon = "▲";
+                    } else if (pnlAmount < -0.5) {
+                        pnlClass = "pnl-loss";
+                        pnlIcon = "▼";
+                    }
+                    pnlText = `${pnlIcon} ${pnlAmount >= 0 ? '+' : ''}${Math.round(pnlAmount).toLocaleString()} (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%)`;
+                }
+
+                let riskText = "안정선";
+                let riskColor = "text-emerald-400";
+                if (s.currentProb < 40) {
+                    riskText = "초고위험";
+                    riskColor = "text-rose-500 font-black";
+                } else if (s.currentProb < 60) {
+                    riskText = "위험";
+                    riskColor = "text-amber-500 font-bold";
+                }
+
+                const unethicalOverlay = ''; // 노예선 배지는 선박명 옆 인라인으로 이동
+                const unethicalBadge = s.isUnethical
+                    ? `<span class="text-[9px] font-black px-1 py-0.5 rounded animate-pulse flex-shrink-0" style="background:rgba(136,19,55,0.85);color:#fda4af;border:1px solid rgba(244,63,94,0.4);">⚠️ 노예선</span>`
+                    : '';
+                const ruinedOverlay = s._ruined
+                    ? `<div class="absolute inset-0 bg-slate-950/80 flex items-center justify-center z-20 rounded-xl">
+                         <div class="text-center">
+                             <div class="text-3xl mb-1">💀</div>
+                             <div class="text-rose-400 font-black text-[11px]">선박 침몰 (영구 손실)</div>
+                             <div class="text-slate-500 text-[10px]">성공률 0% — 투자금 소멸</div>
+                         </div>
+                       </div>`
+                    : '';
+
+                const trendGraphHTML = createTrendGraph(s.history);
+
+                const cardHTML = `
+                    <div class="ship-card relative rounded-xl border ${s.border} ${isOwned ? 'is-owned' : ''} bg-gradient-to-br ${s.bg} p-2 lg:p-2.5 flex flex-col justify-between overflow-hidden shadow-md" style="min-height:280px;">
+                        ${unethicalOverlay}
+                        ${ruinedOverlay}
+                        <div class="flex flex-col min-h-0">
+                            <!-- Ship Identity -->
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <div class="w-8 h-8 rounded-lg border flex-shrink-0 overflow-hidden flex items-center justify-center" style="background:rgba(44,26,4,0.12); border-color:rgba(139,90,43,0.30); position:relative;">
+                                    ${s.flagImg
+                                        ? `<img src="${s.flagImg}" alt="${s.name} 깃발" style="width:100%;height:100%;object-fit:contain;object-position:center;display:block;" onerror="this.style.display='none';">`
+                                        : `<i class="fa-solid ${s.icon} text-blue-400 text-sm"></i>`
+                                    }
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-center gap-1 flex-wrap">
+                                        <h4 class="font-bold text-[14px] leading-tight" style="color:#1a0f00;">${s.name}</h4>
+                                        ${unethicalBadge}
+                                    </div>
+                                    <p class="text-[10px] truncate" style="color:#7a5c2e;">${s.captain}</p>
+                                </div>
+                            </div>
+
+                            <!-- Captain & Goods Circular Avatars -->
+                            <div class="flex gap-2 justify-center bg-slate-950/40 py-1 px-2 rounded-lg items-center mb-1.5 shrink-0">
+                                <div class="flex items-center gap-1.5 flex-1 justify-center border-r border-slate-800/80">
+                                    <div class="w-7 h-7 rounded-full border border-slate-700 bg-slate-900 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                                        <img data-role="captain-photo" data-ship="${shipId}" src="${s.captainImg || ''}" alt="선장 사진" class="w-full h-full object-cover" style="${s.captainImg ? '' : 'display:none;'}" onerror="this.style.display='none';" loading="lazy">
+                                        ${s.captainImg ? '' : '<i class="fa-solid fa-user text-slate-600 text-[11px]"></i>'}
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 leading-tight">
+                                        <div>선장</div>
+                                        <div class="text-slate-300 font-bold truncate max-w-[50px]">${s.captain.replace('선장','').replace('상인','').trim()}</div>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1.5 flex-1 justify-center">
+                                    <div class="w-7 h-7 rounded-full border border-slate-700 bg-slate-900 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                                        <img data-role="goods-photo" data-ship="${shipId}" src="${s.goodsImg || ''}" alt="상품 사진" class="w-full h-full object-cover" style="${s.goodsImg ? '' : 'display:none;'}" onerror="this.style.display='none';">
+                                        ${s.goodsImg ? '' : '<i class="fa-solid fa-box text-slate-600 text-[11px]"></i>'}
+                                    </div>
+                                    <div class="text-[11px] text-slate-400 leading-tight">
+                                        <div>상품</div>
+                                        <div class="font-bold" style="color:#2c1a04;font-size:11px;line-height:1.2;">${s.cargo}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Ship Core Metrics -->
+                            <div class="grid grid-cols-2 gap-y-0.5 gap-x-1 border-t border-b border-slate-800/50 py-1 mb-1 text-[11px] lg:text-[12px]">
+                                <div class="min-w-0">
+                                    <span class="text-slate-500 block text-[10px] scale-95 origin-left leading-none">원정지</span>
+                                    <span class="font-semibold text-slate-300 truncate block leading-tight">${s.destination}</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-500 block text-[10px] scale-95 origin-left leading-none">성공률</span>
+                                    <span class="font-bold text-slate-200 leading-none">${s.currentProb}% <span class="text-[9px] ${riskColor}">(${riskText})</span></span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-500 block text-[10px] scale-95 origin-left leading-none">성공시 배율</span>
+                                    <span class="font-bold text-teal-400 leading-none">${s.currentMult}배</span>
+                                </div>
+                                <div>
+                                    <span class="text-slate-500 block text-[10px] scale-95 origin-left leading-none">현재 1주 시세</span>
+                                    <span class="font-bold text-amber-400 text-xs leading-none">${currentPrice} 레알</span>
+                                </div>
+                            </div>
+
+                            <!-- SVG Area Trend Sparkline -->
+                            <div class="bg-slate-950/60 border border-slate-900/80 rounded-lg p-1 mb-1 shrink-0">
+                                <div class="w-full flex justify-center">
+                                    ${trendGraphHTML}
+                                </div>
+                            </div>
+                            <!-- 호재/악재 배지 -->
+                            ${(() => {
+                                const st = shipMarketStatus[shipId];
+                                if (!st || st === 'neutral' || currentRound === 0) {
+                                    return '<div class="text-center text-[10px] mb-1 rounded py-0.5" style="background:rgba(44,26,4,0.15);color:#9e7a4a;">─ 상황 변동 없음</div>';
+                                } else if (st === 'good') {
+                                    return '<div class="text-center text-[10px] font-black mb-1 rounded py-0.5 animate-pulse" style="background:rgba(22,101,52,0.18);color:#16a34a;border:1px solid rgba(22,101,52,0.35);">🟢 호재입니다!</div>';
+                                } else {
+                                    return '<div class="text-center text-[10px] font-black mb-1 rounded py-0.5 animate-pulse" style="background:rgba(153,27,27,0.18);color:#dc2626;border:1px solid rgba(153,27,27,0.35);">🔴 악재입니다!</div>';
+                                }
+                            })()}
+                        </div>
+
+                        <!-- Trade Controls -->
+                        <div class="shrink-0 mt-auto">
+                            <div class="flex justify-between items-center text-[11px] mb-1 bg-slate-950/40 px-2 py-0.5 rounded">
+                                <span class="text-slate-500">보유: <strong class="text-blue-300 font-mono">${portfolio[shipId]} 주</strong></span>
+                                <span class="text-slate-500">평단가: <strong class="text-slate-300 font-mono">${Math.round(myAvgCost)}</strong></span>
+                            </div>
+                            <div class="flex justify-between items-center text-[12px] mb-1.5 bg-slate-950/40 px-2 py-0.5 rounded">
+                                <span class="text-slate-500">평가액: <strong class="text-slate-200 font-mono">${Math.round(holdingVal).toLocaleString()}</strong></span>
+                                <span class="font-mono font-bold ${pnlClass}">${pnlText}</span>
+                            </div>
+
+                            <div class="flex gap-1 text-[13px]">
+                                <button onclick="buyShares('${shipId}')" style="background:linear-gradient(135deg,#7a4a1a,#a06820);color:#f5edd6;border:1px solid rgba(200,150,12,0.4);" class="flex-1 py-1.5 rounded-lg font-bold transition duration-150 flex items-center justify-center gap-0.5 active:scale-95 hover:brightness-110">
+                                    <i class="fa-solid fa-plus text-[9px]"></i> 매수
+                                </button>
+                                <button onclick="sellShares('${shipId}')" style="${!isOwned ? 'opacity:0.4;pointer-events:none;' : ''}background:rgba(44,26,4,0.25);color:#5c3d11;border:1px solid rgba(92,61,17,0.35);" class="flex-1 py-1.5 rounded-lg font-bold transition duration-150 flex items-center justify-center gap-0.5 active:scale-95 hover:brightness-110" ${!isOwned ? 'disabled' : ''}>
+                                    <i class="fa-solid fa-minus text-[9px]"></i> 매도
+                                </button>
+                                <button onclick="sellAllOfShip('${shipId}')" style="${!isOwned ? 'opacity:0.4;pointer-events:none;' : ''}background:#991b1b;color:#fff;border:1px solid #7f1d1d;" class="px-1.5 py-1.5 rounded-lg text-[10px] font-bold transition duration-150 active:scale-95 hover:brightness-110" title="전액매도" ${!isOwned ? 'disabled' : ''}>
+                                    전액매도
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.insertAdjacentHTML('beforeend', cardHTML);
+            }
+        }
+
+        // SVG Area Chart drawing function (Compact size)
+        function createTrendGraph(priceHistory) {
+            const width = 240;
+            const height = 52; // 그래프 세로 확대
+            
+            let history = [...priceHistory];
+            if (history.length < 2) {
+                history = [50, 50];
+            }
+
+            const min = Math.min(...history);
+            const max = Math.max(...history);
+            const delta = max - min === 0 ? 1 : max - min;
+            
+            let points = [];
+            let areaPoints = [`0,${height}`];
+
+            for (let i = 0; i < history.length; i++) {
+                const x = (i / (history.length - 1)) * width;
+                const y = (height - 3) - ((history[i] - min) / delta) * (height - 6);
+                points.push(`${x},${y}`);
+                areaPoints.push(`${x},${y}`);
+            }
+            areaPoints.push(`${width},${height}`);
+
+            const isUp = history[history.length - 1] >= history[0];
+            const strokeColor = isUp ? '#10b981' : '#f43f5e';
+            const gradId = `grad-${Math.random().toString(36).substr(2, 9)}`;
+
+            return `
+                <svg width="100%" height="${height}" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" class="overflow-visible">
+                    <defs>
+                        <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="${strokeColor}" stop-opacity="0.3"/>
+                            <stop offset="100%" stop-color="${strokeColor}" stop-opacity="0.0"/>
+                        </linearGradient>
+                    </defs>
+                    <line x1="0" y1="${height/2}" x2="${width}" y2="${height/2}" stroke="#1e293b" stroke-width="0.5" stroke-dasharray="3,3"/>
+                    <polygon points="${areaPoints.join(' ')}" fill="url(#${gradId})"/>
+                    <polyline fill="none" stroke="${strokeColor}" stroke-width="2" points="${points.join(' ')}" stroke-linecap="round"/>
+                    ${points.map((pt, idx) => {
+                        const isLast = idx === points.length - 1;
+                        return `<circle cx="${pt.split(',')[0]}" cy="${pt.split(',')[1]}" r="${isLast ? '3' : '1.2'}" fill="${isLast ? '#ffffff' : strokeColor}" stroke="${strokeColor}" stroke-width="${isLast ? '1' : '0'}"/>`;
+                    }).join('')}
+                </svg>
+            `;
+        }
+
+        // ----------------------------------------------------
+        // SIDEBAR REFRESH & STATE SYNCHRONIZATION
+        // ----------------------------------------------------
+        function updateUI() {
+            const totalWealth = calculateTotalAssets();
+            document.getElementById('dashboard-total-assets').textContent = totalWealth.toLocaleString();
+            
+            // Round Display Header
+            if (currentRound === 0) {
+                document.getElementById('dashboard-round').textContent = "출항 준비 단계 (시세 동결 50)";
+                document.getElementById('dashboard-round').className = "text-amber-400 font-bold";
+            } else {
+                document.getElementById('dashboard-round').textContent = `${currentRound} / ${TOTAL_ROUNDS} 라운드`;
+                document.getElementById('dashboard-round').className = "text-blue-400 font-bold";
+            }
+
+            // Left Sidebar Card
+            document.getElementById('stat-cash').textContent = Math.round(cash).toLocaleString();
+            
+            let totalHoldingsVal = 0;
+            for (const shipId in portfolio) {
+                totalHoldingsVal += portfolio[shipId] * calculateSharePrice(ships[shipId]);
+            }
+            document.getElementById('stat-shares-val').textContent = Math.round(totalHoldingsVal).toLocaleString();
+
+            const unethicalBadge = document.getElementById('stat-unethical-invest');
+            unethicalBadge.textContent = `${Math.round(portfolio.E * calculateSharePrice(ships.E)).toLocaleString()} 레알`;
+            if (portfolio.E > 0) {
+                unethicalBadge.className = "text-[11px] font-bold px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 animate-pulse";
+            } else {
+                unethicalBadge.className = "text-[11px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400";
+            }
+
+            // Adjust Next Round Button text
+            const nextBtnText = document.getElementById('btn-next-round').querySelector('span');
+            if (currentRound === 0) {
+                nextBtnText.innerHTML = "1라운드 출항 (정세 변화 개시)";
+            } else if (currentRound === TOTAL_ROUNDS) {
+                nextBtnText.innerHTML = `<strong class="text-amber-300">최종 목적지 도착 정산</strong>`;
+            } else {
+                nextBtnText.textContent = "라운드 마감 및 다음 호외 기사 확인";
+            }
+
+            // Render 실시간 주수 현황 Table (선단명/투자상품/평단가/보유주수/평가금 + 손익색상)
+            const liveTableBody = document.getElementById('live-portfolio-table');
+            liveTableBody.innerHTML = '';
+            let hasAnyStockOwned = false;
+
+            for (const shipId in portfolio) {
+                if (portfolio[shipId] > 0) {
+                    hasAnyStockOwned = true;
+                    const s = ships[shipId];
+                    const price = calculateSharePrice(s);
+                    const evalVal = Math.round(portfolio[shipId] * price);
+                    const myAvg = avgCost[shipId] || 0;
+                    const pct = myAvg > 0 ? ((price - myAvg) / myAvg * 100) : 0;
+                    let pnlClass = "pnl-flat";
+                    if (myAvg > 0) {
+                        if (price - myAvg > 0.01) pnlClass = "pnl-profit";
+                        else if (price - myAvg < -0.01) pnlClass = "pnl-loss";
+                    }
+                    const arrow = pct > 0.1 ? "▲" : pct < -0.1 ? "▼" : "─";
+                    const rowHTML = `
+                        <tr class="border-b" style="border-color:rgba(139,90,43,0.20);">
+                            <td class="p-1 pl-1.5" style="color:#c9a96e;">
+                                <span class="font-bold block" style="max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name.replace(' 호','')}</span>
+                            </td>
+                            <td class="p-1 text-center font-mono" style="color:#9e7a4a;">${Math.round(myAvg)}</td>
+                            <td class="p-1 text-center font-mono" style="color:#c9a96e;">${portfolio[shipId]}주</td>
+                            <td class="p-1 text-center font-mono font-bold ${pnlClass}">${evalVal.toLocaleString()}</td>
+                            <td class="p-1 text-right font-mono font-bold ${pnlClass}">${arrow}${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%</td>
+                        </tr>
+                    `;
+                    liveTableBody.insertAdjacentHTML('beforeend', rowHTML);
+                }
+            }
+
+            if (!hasAnyStockOwned) {
+                liveTableBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-6 text-[11px]" style="color:#7a5c2e;">현재 보유 중인 상선단 지분이 없습니다.</td>
+                    </tr>
+                `;
+            }
+
+            // 선박 카드 그리드도 항상 최신 보유 현황(평단가/손익/보유여부/발광효과)으로 다시 그림
+            renderShipsGrid();
+        }
+
+        // ----------------------------------------------------
+        // FINAL VOYAGE RESOLUTION (ANIMATION SCENE)
+        // ----------------------------------------------------
+        let voyageResults = [];
+        let totalVoyagePayout = 0;
+
+        function startVoyageResolution() {
+            document.getElementById('screen-game').classList.add('hidden');
+            document.getElementById('screen-voyage').classList.remove('hidden');
+
+            const container = document.getElementById('voyage-tracks-container');
+            container.innerHTML = '';
+            document.getElementById('voyage-finish-actions').classList.add('hidden');
+            document.getElementById('voyage-status').textContent = "선단이 대서양 격풍 속으로 순차 출항을 선언했습니다...";
+
+            voyageResults = [];
+            totalVoyagePayout = 0;
+
+            const shipsToAnimate = Object.keys(portfolio).filter(shipId => portfolio[shipId] > 0);
+
+            if (shipsToAnimate.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-slate-900/60 p-8 rounded-2xl border border-slate-800 text-center text-slate-400">
+                        <i class="fa-solid fa-ghost text-4xl text-slate-600 mb-2 animate-bounce"></i>
+                        <p class="font-bold text-slate-300">투자를 전면 유보하시고 원금만 품에 안고 항구에 머무셨습니다!</p>
+                        <p class="text-xs text-slate-500 mt-1">인플레이션 및 신항로 거상들의 조기 선점을 넋놓고 구경하셨습니다.</p>
+                    </div>
+                `;
+                document.getElementById('voyage-status').textContent = "무효 항해. 출항 선박 없음.";
+                document.getElementById('voyage-finish-actions').classList.remove('hidden');
+                return;
+            }
+
+            shipsToAnimate.forEach((shipId, idx) => {
+                const s = ships[shipId];
+                const shares = portfolio[shipId];
+                const currentPrice = calculateSharePrice(s);
+                const originalInvestValue = shares * currentPrice;
+
+                // Probability Calculation
+                const roll = Math.floor(Math.random() * 100) + 1;
+                const isSuccessful = roll <= s.currentProb;
+                
+                let payout = 0;
+                if (isSuccessful) {
+                    payout = shares * currentPrice * s.currentMult;
+                }
+
+                totalVoyagePayout += payout;
+
+                voyageResults.push({
+                    shipId,
+                    name: s.name,
+                    shares,
+                    successProb: s.currentProb,
+                    roll,
+                    isSuccessful,
+                    originalInvestValue,
+                    payout
+                });
+
+                const trackHTML = `
+                    <div class="relative bg-slate-900/70 border border-slate-800/80 rounded-2xl p-3 flex flex-col md:flex-row justify-between items-center gap-3 transition overflow-hidden min-h-[75px]" id="track-${shipId}">
+                        <div class="flex items-center gap-2.5 w-full md:w-1/3 z-10">
+                            <div class="w-7 h-8 rounded-lg bg-slate-800 flex items-center justify-center text-blue-400">
+                                <i class="fa-solid ${s.icon}"></i>
+                            </div>
+                            <div>
+                                <h5 class="font-bold text-slate-200 text-xs">${s.name}</h5>
+                                <p class="text-[9px] text-slate-500">최종배당: ${s.currentMult}배 | 성공률: ${s.currentProb}%</p>
+                            </div>
+                        </div>
+
+                        <!-- Sailing Animation Arena -->
+                        <div class="w-full md:w-1/3 h-8 bg-slate-950/80 rounded-xl relative overflow-hidden flex items-center px-4" id="arena-${shipId}">
+                            <div class="absolute inset-y-0 left-0 bg-blue-500/10 w-0" id="progress-bar-${shipId}"></div>
+                            <div class="text-blue-400 text-base absolute left-4 transition-all duration-[3000ms] ease-in-out z-10" id="ship-icon-${shipId}">
+                                <i class="fa-solid fa-ship"></i>
+                            </div>
+                        </div>
+
+                        <div class="text-right w-full md:w-1/3 font-bold text-xs z-10" id="result-text-${shipId}">
+                            <span class="text-slate-500 animate-pulse text-[10px]"><i class="fa-solid fa-spinner animate-spin"></i> 대양 복판 폭풍우 연산 중...</span>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', trackHTML);
+
+                setTimeout(() => {
+                    triggerTrackAnimation(shipId, isSuccessful, payout, roll, originalInvestValue);
+                }, idx * 1500);
+            });
+
+            setTimeout(() => {
+                document.getElementById('voyage-status').textContent = "함대의 희비가 교차합니다.";
+                document.getElementById('voyage-finish-actions').classList.remove('hidden');
+            }, shipsToAnimate.length * 1500 + 1500);
+        }
+
+        function triggerTrackAnimation(shipId, isSuccess, payout, roll, originalInvestValue) {
+            const shipIcon = document.getElementById(`ship-icon-${shipId}`);
+            const progressBar = document.getElementById(`progress-bar-${shipId}`);
+            const resultTextDiv = document.getElementById(`result-text-${shipId}`);
+            const trackBox = document.getElementById(`track-${shipId}`);
+
+            shipIcon.style.left = "calc(100% - 28px)";
+            progressBar.style.width = "100%";
+            progressBar.style.transition = "width 2.5s ease-in-out";
+
+            setTimeout(() => {
+                if (isSuccess) {
+                    playSound('success');
+                    shipIcon.className = "text-emerald-400 text-lg z-10 animate-sail-success";
+                    trackBox.classList.add('border-emerald-500/40', 'bg-emerald-950/20');
+                    resultTextDiv.innerHTML = `
+                        <div class="text-emerald-400 text-xs font-extrabold flex items-center justify-end gap-1">
+                            <i class="fa-solid fa-circle-check"></i> 항해 성공! (주사위 눈: ${roll}%)
+                        </div>
+                        <div class="text-[10px] text-slate-400 font-normal">
+                            투자금 ${Math.round(originalInvestValue)} ➡️ 수령 <strong class="text-emerald-400">${Math.round(payout).toLocaleString()} 레알</strong>
+                        </div>
+                    `;
+                } else {
+                    playSound('fail');
+                    shipIcon.className = "text-rose-500 text-base z-10 animate-sink";
+                    trackBox.classList.add('border-rose-950', 'bg-rose-950/10');
+                    resultTextDiv.innerHTML = `
+                        <div class="text-rose-500 text-xs font-extrabold flex items-center justify-end gap-1">
+                            <i class="fa-solid fa-circle-xmark"></i> 조난 침몰! (주사위 눈: ${roll}%)
+                        </div>
+                        <div class="text-[10px] text-slate-500 font-normal">
+                            상선 증발 및 <strong class="text-rose-400">전액 소멸 (0 레알)</strong>
+                        </div>
+                    `;
+                }
+            }, 2500);
+        }
+
+        // ----------------------------------------------------
+        // RESULTS DISPLAY & TITLE SELECTION
+        // ----------------------------------------------------
+        function goToResultsScreen() {
+            playSound('click');
+            document.getElementById('screen-voyage').classList.add('hidden');
+            document.getElementById('screen-results').classList.remove('hidden');
+
+            const finalAssets = Math.round(cash + totalVoyagePayout);
+
+            // Calculate Grade
+            let grade = "C";
+            let gradeDesc = "파산 수습 선원 (처음부터 다시 출항 준비)";
+            if (finalAssets >= 8000) {
+                grade = "SS";
+                gradeDesc = "신항로 동인도 회사의 절대적 독점 지배자";
+            } else if (finalAssets >= 5000) {
+                grade = "S";
+                gradeDesc = "영국 황실이 극진히 예우하는 대부호 거상";
+            } else if (finalAssets >= 3000) {
+                grade = "A";
+                gradeDesc = "상인 길드에서 탄탄한 신망을 얻은 성공한 상인";
+            } else if (finalAssets >= 1500) {
+                grade = "B";
+                gradeDesc = "본전치기를 달성하여 소문만 남긴 평범한 선주";
+            }
+
+            document.getElementById('result-grade').textContent = grade;
+            document.getElementById('result-grade-desc').textContent = gradeDesc;
+            document.getElementById('result-cash').textContent = `${Math.round(cash).toLocaleString()} 레알`;
+            document.getElementById('result-payout').textContent = `${Math.round(totalVoyagePayout).toLocaleString()} 레알`;
+            document.getElementById('result-total-wealth').textContent = finalAssets.toLocaleString();
+
+            let distinctShipsInvested = 0;
+            for (const shipId in portfolio) {
+                if (portfolio[shipId] > 0) distinctShipsInvested++;
+            }
+
+            // 30가지 칭호 판정 (우선순위 높은 것부터 매칭되는 첫 칭호 채택)
+            const earnedTitles = determineTitles({ finalAssets, distinctShipsInvested });
+            const earnedTitle = earnedTitles[0];
+
+            const titlesContainer = document.getElementById('result-titles-container');
+            const tagLabels = { A:'자산', B:'업적', C:'선박', D:'매매', E:'도덕', F:'특별', Z:'' };
+            const tagColors = { A:'#b45309', B:'#0f766e', C:'#7c3aed', D:'#1d4ed8', E:'#15803d', F:'#9f1239', Z:'#6b7280' };
+            titlesContainer.innerHTML = earnedTitles.map(function(t, i) {
+                return '<div class="flex items-start gap-2 p-2 rounded-lg" style="background:rgba(255,255,255,0.25); border:1px solid rgba(139,90,43,0.20);">'
+                    + '<span class="text-[9px] font-black px-1.5 py-0.5 rounded flex-shrink-0 mt-0.5" style="background:' + tagColors[t.tag] + '22; color:' + tagColors[t.tag] + '; border:1px solid ' + tagColors[t.tag] + '44;">' + (tagLabels[t.tag] || '') + '</span>'
+                    + '<div class="text-left">'
+                    + '<div class="font-black text-sm" style="color:' + (i === 0 ? '#b45309' : '#5c3d11') + ';">' + t.title + '</div>'
+                    + '<div class="text-[11px] leading-snug mt-0.5" style="color:#7a5c2e;">' + t.desc + '</div>'
+                    + '</div></div>';
+            }).join('');
+
+            // Final details populating
+            document.getElementById('rec-unethical').textContent = totalInvestedInUnethical > 0 ? `관여함 (${Math.round(totalInvestedInUnethical)} 레알 소비)` : "절대 관여 안 함 (청렴)";
+            document.getElementById('rec-unethical').className = totalInvestedInUnethical > 0 ? "text-right font-bold text-rose-400" : "text-right font-bold text-emerald-400";
+
+            document.getElementById('rec-diversify').textContent = `8개 선단 중 ${distinctShipsInvested}개 선단 소유`;
+            
+            let ethicDesc = "기회주의적 상인";
+            if (ethicalScore >= 5) ethicDesc = "도덕과 생명 존중형";
+            else if (ethicalScore <= -3) ethicDesc = "철저한 배금주의자";
+            document.getElementById('rec-ethics-score').textContent = ethicDesc;
+
+            document.getElementById('rec-allin').textContent = hasAllInHistory ? "이력 감지됨 (고위험 투자 선호)" : "없음 (규율 준수)";
+            document.getElementById('rec-allin').className = hasAllInHistory ? "text-right font-bold text-amber-500 animate-pulse" : "text-right font-bold text-slate-400";
+
+            // 나의 칭호 로컬 저장
+            const myTitlesKey = `aov_titles_${playerClass}_${playerNumber}_${playerName}`;
+            let myTitles = [];
+            try { myTitles = JSON.parse(localStorage.getItem(myTitlesKey) || '[]'); } catch(e) {}
+            const today = new Date().toLocaleDateString('ko-KR');
+            earnedTitles.forEach(function(t) {
+                myTitles.push({ title: t.title, grade: grade, date: today, assets: finalAssets });
+            });
+            localStorage.setItem(myTitlesKey, JSON.stringify(myTitles.slice(-50)));
+
+            // 결과를 구글 스프레드시트로 제출 (칭호 수집 명부 기록)
+            submitResultToSheet({
+                playerClass: playerClass, playerNumber: playerNumber, playerName: playerName,
+                finalAssets: finalAssets, grade: grade,
+                title: earnedTitle.title,
+                allTitles: earnedTitles.map(function(t){ return t.title; }).join(' / '),
+                cash: Math.round(cash), payout: Math.round(totalVoyagePayout),
+                distinctShipsInvested: distinctShipsInvested, ethicalScore: ethicalScore,
+                unethicalInvested: Math.round(totalInvestedInUnethical),
+                hasAllInHistory: hasAllInHistory
+            });
+        }
+
+        // ----------------------------------------------------
+        // 30가지 칭호 판정 시스템 (투자 성향 + 수익금 + 특수 행동 종합 판정)
+        // ----------------------------------------------------
+        // =============================================
+        // 칭호 판정 - 여러 개 동시 획득 가능
+        // =============================================
+        function determineTitles({ finalAssets, distinctShipsInvested }) {
+            const D = ships.D, H = ships.H;
+            const dVal = portfolio.D * calculateSharePrice(D);
+            const hVal = portfolio.H * calculateSharePrice(H);
+            const fVal = portfolio.F * calculateSharePrice(ships.F);
+            const bVal = portfolio.B * calculateSharePrice(ships.B);
+            const cVal = portfolio.C * calculateSharePrice(ships.C);
+            const gVal = portfolio.G * calculateSharePrice(ships.G);
+            const aVal = portfolio.A * calculateSharePrice(ships.A);
+
+            const earned = []; // 획득한 칭호 전부 수집
+
+            // ---- [A] 자산 규모 칭호 (구간별 1개) ----
+            if      (finalAssets >= 30000) earned.push({ tag:"A", title:"대항해 시대 바다의 황제", desc:"역사상 단 한 번도 달성된 적 없는 3만 레알의 경지. 대서양, 인도양, 태평양을 모두 손에 쥔 진정한 바다의 지배자입니다." });
+            else if (finalAssets >= 10000) earned.push({ tag:"A", title:"투자의 경지", desc:"시장의 미세한 바람과 파동의 정점을 귀신같이 짚어내고 분산과 집중 투자를 혼용하여 동대륙 무역 역사를 홀로 새로 쓴 초인의 경지입니다." });
+            else if (finalAssets >= 8000)  earned.push({ tag:"A", title:"신항로의 살아있는 전설", desc:"8척의 선단을 손바닥 위에 올려놓고 움직인 듯, 거의 모든 항로에서 압도적인 성과를 거둔 대부호입니다." });
+            else if (finalAssets >= 7000)  earned.push({ tag:"A", title:"리스본 증권거래소의 제왕", desc:"포르투갈 왕실마저 자문을 구하는 압도적인 자산 규모를 쌓아올린 거상입니다." });
+            else if (finalAssets >= 6000)  earned.push({ tag:"A", title:"동인도 무역의 떠오르는 거성", desc:"탄탄한 안목으로 여러 항로에서 큰 수익을 연달아 거머쥔 신흥 자본가입니다." });
+            else if (finalAssets >= 5000)  earned.push({ tag:"A", title:"황금 나침반을 쥔 항해 투자자", desc:"위험과 기회를 정확히 가늠하는 직감으로 큰 성공을 거둔 노련한 투자자입니다." });
+            else if (finalAssets >= 4000)  earned.push({ tag:"A", title:"리스본 항구의 떠오르는 큰손", desc:"꾸준한 분석과 결단으로 시장의 흐름을 잘 탄 유망한 거상입니다." });
+            else if (finalAssets >= 3000)  earned.push({ tag:"A", title:"대서양 무역의 안정적 강자", desc:"큰 욕심 없이도 견실한 수익을 차곡차곡 쌓아 신뢰받는 투자자가 되었습니다." });
+            else if (finalAssets >= 2500)  earned.push({ tag:"A", title:"신항로 개척의 유망주", desc:"초기 투자금을 거의 두 배 가까이 불려낸 성장형 투자자입니다." });
+            else if (finalAssets >= 2000)  earned.push({ tag:"A", title:"포르투갈 왕실 인증 유능한 상인", desc:"안정적인 수익률로 왕실의 눈에 들 만큼 신뢰를 쌓은 상인입니다." });
+            else if (finalAssets >= 1700)  earned.push({ tag:"A", title:"성공적인 첫 항해를 마친 신참 거상", desc:"처음 도전한 투자임에도 합리적인 수익을 거둔 재능 있는 신참입니다." });
+            else if (finalAssets >= 1400)  earned.push({ tag:"A", title:"잔잔한 파도 위의 알찬 수익가", desc:"큰 위험을 피하면서도 꼬박꼬박 수익을 챙긴 알짜 투자자입니다." });
+            else if (finalAssets >= 1100)  earned.push({ tag:"A", title:"원금 수성에 성공한 신중론자", desc:"큰 손실 없이 원금 부근을 지켜낸 신중하고 차분한 투자자입니다." });
+            else if (finalAssets >= 800)   earned.push({ tag:"A", title:"절반의 손실을 막아낸 침착한 투자자", desc:"여러 번의 풍랑 속에서도 완전히 무너지지 않고 절반 이상의 자산을 지켜낸 투자자입니다." });
+            else if (finalAssets >= 600)   earned.push({ tag:"A", title:"쓰라린 교훈을 얻은 견습 상인", desc:"큰 손실을 보았지만 그 경험에서 값진 투자의 교훈을 얻은 견습 상인입니다." });
+            else if (finalAssets >= 400)   earned.push({ tag:"A", title:"풍랑에 휩쓸린 비운의 선주", desc:"여러 척의 배가 동시에 조난당하며 큰 타격을 입은 비운의 선주입니다." });
+            else                            earned.push({ tag:"A", title:"바다 밑바닥 개척의 기부천사", desc:"투자하는 족족 모든 상선이 침몰하는 파멸적인 확률을 뚫어낸 불운의 아이콘입니다." });
+
+            // ---- [B] 특수 달성 칭호 (복수 획득 가능) ----
+            if (finalAssets >= 950 && finalAssets <= 1050)
+                earned.push({ tag:"B", title:"완벽한 평화 본전치기 선구자", desc:`${TOTAL_ROUNDS}라운드의 모진 풍파를 견디고도 정확히 원금 부근으로 돌아오는 기이한 연금술을 시전하여 원금 수호 신화를 이룩했습니다.` });
+            if (hasAllInHistory && finalAssets >= 5000)
+                earned.push({ tag:"B", title:"하이리스크 하이리턴 레이서", desc:"위태로운 고위험 선박에 운명을 올인하여 절체절명의 폭풍을 극적으로 뚫어내고 신분 세탁을 이뤄낸 야수의 심장을 지닌 타짜입니다." });
+            if (hasAllInHistory && finalAssets < 300)
+                earned.push({ tag:"B", title:"바다의 기부 천사 (알거지)", desc:"리스크 관리는 뒷전에 미루고 전재산을 올인해 시원하게 바다 밑으로 수장시켜 준 대인배(혹은 투기꾼)입니다." });
+            if (distinctShipsInvested === 8)
+                earned.push({ tag:"B", title:"팔방미인 전천후 투자자", desc:"8척의 선단 모두에 지분을 나눠 담은 완전 분산 투자의 교과서적 실천가입니다." });
+            if (distinctShipsInvested >= 7)
+                earned.push({ tag:"B", title:"움직이는 인간 포트폴리오", desc:"위험을 극단으로 혐오하여 거의 모든 상선에 골고루 자금을 나눠 담아 한 척이 침몰하더라도 다른 노선에서 완벽히 보완해낸 철저한 분산 투자의 대가입니다." });
+            if (distinctShipsInvested === 1)
+                earned.push({ tag:"B", title:"단 하나의 별을 따른 자", desc:"오직 한 선단에 모든 것을 걸고 그 결과를 담담히 받아들인 고독한 승부사입니다." });
+            if (distinctShipsInvested === 2)
+                earned.push({ tag:"B", title:"선택과 집중의 이원 전략가", desc:"단 두 개의 선단에만 집중하여 효율적인 포트폴리오를 구성한 전략가입니다." });
+            if (distinctShipsInvested >= 5 && distinctShipsInvested <= 6)
+                earned.push({ tag:"B", title:"균형 잡힌 분산투자 모범생", desc:"위험을 적절히 분산하면서도 과하지 않은 균형감을 보여준 모범적인 투자자입니다." });
+            if (maxSingleShipRatio >= 0.85)
+                earned.push({ tag:"B", title:"목숨을 건 올인 도박사", desc:"자산의 85% 이상을 단 한 선단에 몰아넣은 배짱과 광기의 투자자입니다." });
+            if (maxSingleShipRatio >= 0.7 && maxSingleShipRatio < 0.85)
+                earned.push({ tag:"B", title:"집중투자 신봉자", desc:"한 선단에 자산의 대부분을 집중해 큰 그림을 그린 과감한 투자자입니다." });
+            if (cash >= 900 && distinctShipsInvested === 0)
+                earned.push({ tag:"B", title:"구경꾼 거상", desc:"10라운드 내내 투자 한 번 안 하고 현금만 쥐고 있던 신중한(?) 관망자입니다." });
+
+            // ---- [C] 선박 특화 칭호 ----
+            if (fVal > finalAssets * 0.45 && finalAssets > 0)
+                earned.push({ tag:"C", title:"동방 비단길의 마지막 도박사", desc:"가장 위험하지만 가장 큰 보상을 노리는 빅토리아 호의 비단 무역에 과감히 베팅한 도박사입니다." });
+            if (bVal > finalAssets * 0.45 && finalAssets > 0)
+                earned.push({ tag:"C", title:"향료 군도의 숨은 권력자", desc:"정향과 향료 무역의 흐름을 정확히 읽어내고 골든 하인드 호에 깊이 투자한 향료 전문가입니다." });
+            if (cVal > finalAssets * 0.45 && finalAssets > 0)
+                earned.push({ tag:"C", title:"포토시 은광의 진짜 주인", desc:"신대륙의 은광 채굴 사업에 깊이 관여하여 막대한 은 수익을 거둔 광산 투자자입니다." });
+            if (gVal > finalAssets * 0.45 && finalAssets > 0)
+                earned.push({ tag:"C", title:"카리브해 설탕 농장의 큰손", desc:"사탕수수와 설탕 무역의 단맛을 제대로 본 카리브해의 실질적 지배자입니다." });
+            if (dVal > finalAssets * 0.55 && finalAssets > 0)
+                earned.push({ tag:"C", title:"신대륙 구황식물 보급왕", desc:"인류의 생존을 책임질 감자 보급선에 끈질기게 목돈을 투자하여 전 유럽의 기아 문제를 구휼해낸 위대한 영웅입니다." });
+            if (hVal > finalAssets * 0.55 && finalAssets > 0)
+                earned.push({ tag:"C", title:"지중해의 애처로운 망령", desc:"구시대의 전유물인 베네치아 중심 지중해 내해 무역선에만 기득권 고집을 유지하다 천천히 고사해 버린 보수론자입니다." });
+            if (aVal > finalAssets * 0.55 && finalAssets > 0)
+                earned.push({ tag:"C", title:"인도 후추 무역의 선구자", desc:"향신료 중에서도 가장 귀한 인도산 후추 무역에 집중 투자하여 유럽 식탁을 지배한 향신료 제왕입니다." });
+
+            // ---- [D] 투자 성향 칭호 ----
+            if (buyActionCount >= 55)
+                earned.push({ tag:"D", title:"쉴 새 없는 손가락의 단타 승부사", desc:"매수 버튼을 쉴 새 없이 누르며 시세 변화에 반응한 활동적인 단기 투자자입니다." });
+            if (sellActionCount >= 35)
+                earned.push({ tag:"D", title:"재빠른 손절의 달인", desc:"위험 신호를 감지하면 지체 없이 매도해 손실을 최소화하는 전략을 구사한 투자자입니다." });
+            if (buyActionCount > 0 && sellActionCount === 0)
+                earned.push({ tag:"D", title:"한번 사면 절대 안 파는 장기 신봉자", desc:"매수한 주식을 끝까지 들고 가는 우직한 장기 투자 철학을 실천한 투자자입니다." });
+            if (buyActionCount + sellActionCount >= 100)
+                earned.push({ tag:"D", title:"거래소를 뒤흔든 폭풍 투자자", desc:"100회 이상의 매수·매도를 단행하며 리스본 거래소를 혼자 뒤흔든 과도한 열정의 소유자입니다." });
+            if (sellActionCount === 0 && buyActionCount === 0)
+                earned.push({ tag:"D", title:"움직임이 없는 거대한 돌", desc:"단 한 번의 매수도 하지 않은 채 현금만 쥐고 있었습니다. 철벽 같은 보수주의자입니다." });
+
+            // ---- [E] 윤리/도덕 칭호 ----
+            if (totalInvestedInUnethical >= 500)
+                earned.push({ tag:"E", title:"영혼 없는 냉혈 자본가", desc:"인간의 도덕적 양심과 생명을 거래 수단으로 전락시킨 노예선 무역에 막강한 재정 지원을 서슴지 않은 무자비한 자본가입니다." });
+            if (totalInvestedInUnethical > 0 && totalInvestedInUnethical < 500)
+                earned.push({ tag:"E", title:"양심과 욕심 사이의 갈등하는 상인", desc:"한때 비윤리적 무역에 손을 댔지만 끝까지 몰입하지는 않은, 인간적인 면모의 상인입니다." });
+            if (totalInvestedInUnethical === 0 && ethicalScore >= 6)
+                earned.push({ tag:"E", title:"윤리적 사회적 공헌가 (ESG 선구자)", desc:"비윤리적인 노예 무역을 단호히 배척하고 원주민 인권 고발에 앞장선 역사책에 기록될 고결한 투자자입니다." });
+            if (totalInvestedInUnethical === 0 && ethicalScore >= 3 && ethicalScore < 6)
+                earned.push({ tag:"E", title:"균형 잡힌 양심적 상인", desc:"이익과 도덕 사이에서 대체로 옳은 방향을 선택하려 노력한 균형 잡힌 상인입니다." });
+            if (ethicalScore <= -3)
+                earned.push({ tag:"E", title:"철저한 배금주의자", desc:"도덕적 갈림길마다 한 치의 고민 없이 이익을 택한 냉정한 현실주의자입니다." });
+            if (ethicalScore <= -6)
+                earned.push({ tag:"E", title:"악명 높은 해적 자본가", desc:"모든 도덕적 판단을 이익 앞에 내던진, 대항해시대 역사에서 가장 악명 높은 자본가로 기록됩니다." });
+
+            // ---- [F] 신규 특수 칭호 15개 ----
+            // 1. 완벽한 철수
+            if (cash >= finalAssets * 0.8 && finalAssets > 1000)
+                earned.push({ tag:"F", title:"현금이 왕이다", desc:"주식보다 현금을 신봉하며 대부분의 자산을 현금으로 보유한 채 항해를 마친 실속파 투자자입니다." });
+            // 2. 선박 전멸
+            if (Object.values(ships).filter(s => s._ruined).length >= 3)
+                earned.push({ tag:"F", title:"저주받은 항로의 선주", desc:"3척 이상의 선박이 성공률 0%로 침몰하는 역사적 불운을 경험한 전설의 패배자입니다." });
+            // 3. 생존율 100%
+            const ownedShips = Object.keys(portfolio).filter(sid => portfolio[sid] > 0);
+            const succeededCount = ownedShips.filter(sid => !ships[sid]._ruined).length;
+            if (ownedShips.length >= 3 && succeededCount === ownedShips.length && finalAssets > 1500)
+                earned.push({ tag:"F", title:"무사귀환의 선단장", desc:"투자한 모든 선단이 한 척도 침몰하지 않고 무사히 귀항한 행운의 선단장입니다." });
+            // 4. 고배율 성공
+            const highMultSucceeded = ownedShips.some(sid => ships[sid].currentMult >= 4.0 && !ships[sid]._ruined && portfolio[sid] > 0);
+            if (highMultSucceeded)
+                earned.push({ tag:"F", title:"폭풍을 뚫은 대박 투자자", desc:"4배 이상의 고배율 선박이 실제로 항해에 성공하여 폭발적인 수익을 거둔 행운아입니다." });
+            // 5. 대규모 투자
+            if (buyActionCount + sellActionCount >= 60 && finalAssets >= 3000)
+                earned.push({ tag:"F", title:"부지런한 시장의 개미", desc:"수십 차례의 매매를 거듭하며 성실하게 수익을 쌓아올린 부지런한 투자자입니다." });
+            // 6. 전액 현금 보유
+            if (distinctShipsInvested === 0)
+                earned.push({ tag:"F", title:"항구를 떠나지 않은 겁쟁이", desc:"끝내 어떤 선단에도 투자하지 않고 1000레알을 그대로 품에 안은 채 항해를 지켜본 관망자입니다." });
+            // 7. 극적 역전 (초반 손실 후 고수익)
+            if (finalAssets >= 4000 && hasAllInHistory)
+                earned.push({ tag:"F", title:"절체절명의 역전 드라마", desc:"올인의 위기를 딛고 결국 4000레알 이상을 달성한, 한 편의 드라마 같은 역전 투자자입니다." });
+            // 8. 최고 성공률 선박 투자
+            const safestShipId = Object.keys(ships).reduce((a,b) => ships[a].currentProb > ships[b].currentProb ? a : b);
+            if (portfolio[safestShipId] > 0 && portfolio[safestShipId] === Math.max(...Object.values(portfolio)))
+                earned.push({ tag:"F", title:"안전제일 리스크 관리자", desc:"가장 성공 확률이 높은 선박에 가장 많이 투자한 철저한 안전주의 투자자입니다." });
+            // 9. 최저 성공률 선박에 최다 투자
+            const riskyShipId = Object.keys(ships).filter(sid => !ships[sid]._ruined).reduce((a,b) => ships[a].currentProb < ships[b].currentProb ? a : b, 'F');
+            if (portfolio[riskyShipId] > 0 && portfolio[riskyShipId] === Math.max(...Object.values(portfolio)))
+                earned.push({ tag:"F", title:"위험을 먹고 사는 모험가", desc:"가장 성공 확률이 낮은 고위험 선박에 가장 많이 투자한 담대한 모험주의자입니다." });
+            // 10. 전체 라운드 이익 유지
+            if (finalAssets >= 1200 && buyActionCount >= 8 && sellActionCount >= 3)
+                earned.push({ tag:"F", title:"꾸준한 정석 투자자", desc:"매수와 매도를 적절히 반복하며 안정적으로 수익을 관리한 교과서 같은 투자자입니다." });
+            // 11. 대형 손실 후 생존
+            if (finalAssets >= 800 && finalAssets < 1200 && buyActionCount >= 5 && distinctShipsInvested >= 3)
+                earned.push({ tag:"F", title:"풍랑 속 생존자", desc:"큰 파도에 흔들리면서도 끝내 침몰하지 않고 항구로 돌아온 끈질긴 생존자입니다." });
+            // 12. 포트폴리오 = 선박 3척 정확히
+            if (distinctShipsInvested === 3)
+                earned.push({ tag:"F", title:"삼각편대 전략가", desc:"정확히 3개 선단에만 집중 투자하여 독자적인 삼각 분산 전략을 구사한 전략가입니다." });
+            // 13. 특정 선박(마젤란) 성공
+            if (portfolio.F > 0 && !ships.F._ruined && ships.F.currentMult >= 4.0)
+                earned.push({ tag:"F", title:"마젤란의 후계자", desc:"세계 일주를 완성한 마젤란의 빅토리아 호가 기적적으로 귀환하는 역사의 현장에 투자했던 선각자입니다." });
+            // 14. 은화 집착
+            if (cVal > 0 && bVal > 0 && cVal + bVal > finalAssets * 0.6)
+                earned.push({ tag:"F", title:"향료와 은의 이중 제왕", desc:"향료(B)와 은(C), 대항해시대 최고 수익 자원 두 곳에 집중 투자한 안목 있는 이중 전략가입니다." });
+            // 15. 첫 라운드부터 마지막까지 동일 포트폴리오 유지 감지용 (매도 0)
+            if (sellActionCount === 0 && buyActionCount >= 5 && finalAssets >= 1500)
+                earned.push({ tag:"F", title:"불굴의 장기 보유자", desc:"단 한 주도 팔지 않고 모든 선단을 끝까지 보유한 채 성과를 거둔 강철 의지의 장기 투자자입니다." });
+
+            // ---- 기본 칭호 (항상 포함) ----
+            if (earned.length === 1 && earned[0].tag === 'A' && finalAssets < 1100)
+                earned.push({ tag:"Z", title:"평범한 시장의 관찰자", desc:"과장되지 않고 모험도 사양한 채 시대의 관망자로 남은 정석적인 소시민 상인입니다." });
+
+            return earned.length > 0 ? earned : [{ tag:"Z", title:"평범한 시장의 관찰자", desc:"과장되지 않고 모험도 사양한 채 시대의 관망자로 남은 소시민 상인입니다." }];
+        }
+
+        // 하위 호환용 (단일 반환이 필요한 곳)
+        function determineTitle(args) {
+            return determineTitles(args)[0];
+        }
+
+        // ----------------------------------------------------
+        // GOOGLE SHEETS 결과 제출 & 명예의 전당(TOP10) 로드
+        // ----------------------------------------------------
+        function submitResultToSheet(data) {
+            const statusEl = document.getElementById('sheet-submit-status');
+            if (!SHEET_WEBHOOK_URL) {
+                if (statusEl) {
+                    statusEl.innerHTML = `<i class="fa-solid fa-circle-info"></i> 스프레드시트 연동 URL이 설정되지 않았습니다.`;
+                    statusEl.className = "bg-slate-900/60 border border-slate-800 text-slate-500 px-3 py-2 rounded-lg flex items-center justify-center gap-2";
+                }
+                return;
+            }
+            const pwKey = `aov_pw_${data.playerClass}_${data.playerNumber}_${data.playerName}`;
+            const pw = localStorage.getItem(pwKey) || '';
+            const payload = {
+                timestamp: new Date().toISOString(),
+                playerClass: data.playerClass,
+                playerNumber: data.playerNumber,
+                playerName: data.playerName,
+                password: pw,
+                finalAssets: data.finalAssets,
+                title: data.title,
+                grade: data.grade
+            };
+            fetch(SHEET_WEBHOOK_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify(payload)
+            }).then(() => {
+                if (statusEl) {
+                    statusEl.innerHTML = `<i class="fa-solid fa-circle-check text-emerald-400"></i> 칭호 "${data.title}" 기록이 명부에 제출되었습니다!`;
+                    statusEl.className = "bg-emerald-950/40 border border-emerald-800/60 text-emerald-300 px-3 py-2 rounded-lg flex items-center justify-center gap-2";
+                }
+            }).catch(() => {
+                if (statusEl) {
+                    statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-amber-400"></i> 제출 중 오류. 네트워크를 확인해주세요.`;
+                    statusEl.className = "bg-amber-950/30 border border-amber-800/60 text-amber-300 px-3 py-2 rounded-lg flex items-center justify-center gap-2";
+                }
+            });
+        }
+
+        // 로비 화면의 칭호 수집 명예의 전당(TOP10) 로드: 같은 칭호를 가장 많이 모은 순서로 표시
+        function loadHallOfFame() {
+            const listEl = document.getElementById('hall-of-fame-list');
+            const icon = document.getElementById('hof-refresh-icon');
+            if (!listEl) return;
+
+            if (!SHEET_WEBHOOK_URL) {
+                listEl.innerHTML = `<p class="text-slate-500 text-[12px] text-center py-3">스프레드시트 연동 URL이 설정되지 않아 명예의 전당을 표시할 수 없습니다.</p>`;
+                return;
+            }
+
+            if (icon) icon.classList.add('animate-spin');
+            fetch(`${SHEET_WEBHOOK_URL}?action=hof`, { method: 'GET' })
+                .then(res => res.json())
+                .then(records => {
+                    renderHallOfFame(records);
+                })
+                .catch(() => {
+                    listEl.innerHTML = `<p class="text-rose-400 text-[12px] text-center py-3">명부를 불러오지 못했습니다. (CORS 또는 네트워크 문제일 수 있습니다)</p>`;
+                })
+                .finally(() => {
+                    if (icon) icon.classList.remove('animate-spin');
+                });
+        }
+
+        function renderHallOfFame(records) {
+            const listEl = document.getElementById('hall-of-fame-list');
+            if (!Array.isArray(records) || records.length === 0) {
+                listEl.innerHTML = `<p class="text-slate-500 text-[12px] text-center py-3">아직 제출된 칭호 기록이 없습니다.</p>`;
+                return;
+            }
+
+            // 학생별로 보유한 "고유 칭호 개수"를 집계하여 TOP10 산출
+            const studentMap = {};
+            records.forEach(r => {
+                const key = `${r.playerClass}-${r.playerNumber}-${r.playerName}`;
+                if (!studentMap[key]) {
+                    studentMap[key] = { name: r.playerName, cls: r.playerClass, num: r.playerNumber, titles: new Set(), titleList: [] };
+                }
+                if (!studentMap[key].titles.has(r.title)) {
+                    studentMap[key].titles.add(r.title);
+                    studentMap[key].titleList.push(r.title);
+                }
+            });
+
+            const ranking = Object.values(studentMap)
+                .map(s => ({ ...s, count: s.titles.size, titles: s.titleList }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 10);
+
+            listEl.innerHTML = ranking.map((s, idx) => {
+                const titlesArr = Array.isArray(s.titles) ? s.titles : [];
+                const latestTitle = titlesArr[titlesArr.length - 1] || '-';
+                const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx+1}`;
+                return `
+                <div class="rounded-lg px-2.5 py-1.5 mb-0.5" style="background:rgba(255,255,255,0.30); border:1px solid rgba(139,90,43,0.25);">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[12px] font-bold flex items-center gap-1.5" style="color:#2c1a04;">
+                            <span class="w-5 text-center">${medal}</span> ${s.cls || s.playerClass}반 ${s.num || s.playerNumber}번 ${s.name || s.playerName}
+                        </span>
+                        <span class="text-[12px] font-bold" style="color:#b45309;">${s.count}개 칭호</span>
+                    </div>
+                    <div class="text-[10px] mt-0.5 truncate" style="color:#7a5c2e; padding-left:20px;">최신: ${latestTitle}</div>
+                </div>`;
+            }).join('');
+        }
+
+        // ----------------------------------------------------
+        // REBOOT & RESET GAME
+        // ----------------------------------------------------
+        function resetGame() {
+            playSound('click');
+            cash = 1000;
+            currentRound = 0;
+            ethicalScore = 0;
+            totalInvestedInUnethical = 0;
+            hasUnethicalInvestedNow = false;
+            hasAllInHistory = false;
+            isEthicalCrisisTriggered = false;
+            maxSingleShipRatio = 0;
+            buyActionCount = 0;
+            sellActionCount = 0;
+            triggeredEventRounds = [];
+            pendingRoundAfterEvent = null;
+            currentActiveEvent = null;
+            availableEvents = [...suddenEvents];
+            usedSituationTitles = new Set();
+            window._pendingEventRound = null;
+            currentForecastPool = [];
+
+            for (const key in portfolio) {
+                portfolio[key] = 0;
+                avgCost[key] = 0;
+                totalCostBasis[key] = 0;
+            }
+
+            ships = JSON.parse(JSON.stringify(baseShips));
+            // _ruined 플래그 초기화
+            for (const k in ships) ships[k]._ruined = false;
+            shipMarketStatus = {};
+
+            document.getElementById('screen-results').classList.add('hidden');
+            document.getElementById('screen-lobby').classList.remove('hidden');
+            document.getElementById('main-header').style.display = 'none';
+
+            // 플레이어 입력 폼은 유지 (같은 학생이 재도전하는 경우가 많으므로 비우지 않음)
+            document.getElementById('player-form-error').classList.add('hidden');
+
+            document.getElementById('news-title').textContent = "선단 출발을 앞두고 자금을 모집합니다.";
+            document.getElementById('news-desc').textContent = "지금은 출항 전 준비 단계입니다. 세계 금융 상황이 요동치기 전이므로, 모든 주식이 변동 없이 기본가 50레알 고정으로 제공됩니다. 자유롭게 1주씩 매수하며 초기 투자를 결정해 포트폴리오를 분산 배치해두십시오. 준비가 끝나면 아래 버튼을 눌러 본 레이스를 전개하세요!";
+            document.getElementById('news-type-badge').innerHTML = `<i class="fa-solid fa-circle-info animate-pulse"></i> 출항 준비 단계 (포트폴리오 구성)`;
+            document.getElementById('news-round-label').textContent = "준비 상태";
+
+            document.getElementById('forecast-cards-container').innerHTML = `<p class="col-span-2 text-slate-500 text-[11px] text-center py-4">1라운드 진입 시 첩보가 공개됩니다.</p>`;
+            
+            updateUI();
+        }
+
+        function quitGame() {
+            if (confirm("정말 포기하시겠습니까?\n현재 게임 진행 상황이 모두 초기화됩니다.")) {
+                resetGame();
+            }
+        }
+
+
+        // ============================================================
+        // 게임 화면 자동 축소 - #scale-root를 뷰포트에 맞게 scale
+        // body는 항상 뷰포트 100% / overflow hidden
+        // #scale-root만 1440x860 고정 후 scale
+        // ============================================================
+        const DESIGN_W = 1536;
+        const DESIGN_H = 800;
+
+        function applyGameScale() { /* scale 미사용 */ }
+
+        window.addEventListener('resize', applyGameScale);
+
+        window.onload = function() {
+            updateUI();
+            loadHallOfFame();
+            applyGameScale();
+            // 최초 로딩: 로비 화면이므로 헤더 숨기기
+            document.getElementById('main-header').style.display = 'none';
+        }
+
+        // 투자 현황 탭 전환
+        let currentPortfolioTab = 'invest';
+        function switchPortfolioTab(tab) {
+            currentPortfolioTab = tab;
+            document.getElementById('portfolio-tab-invest').classList.toggle('hidden', tab !== 'invest');
+            document.getElementById('portfolio-tab-return').classList.toggle('hidden', tab !== 'return');
+            document.getElementById('tab-invest').classList.toggle('active', tab === 'invest');
+            document.getElementById('tab-return').classList.toggle('active', tab === 'return');
+        }
+
+        // 나의 칭호 보기 (로컬 기록)
+        function showMyTitles() {
+            const cls = document.getElementById('input-player-class').value.trim();
+            const num = document.getElementById('input-player-number').value.trim();
+            const name = document.getElementById('input-player-name').value.trim();
+            const pw = document.getElementById('input-player-pw').value.trim();
+            if (!cls || !num || !name) {
+                alert("반, 번호, 이름을 먼저 입력하세요!");
+                return;
+            }
+            if (!pw) {
+                alert("비밀번호를 입력해야 나의 칭호를 볼 수 있습니다!");
+                return;
+            }
+            const pwKey = `aov_pw_${cls}_${num}_${name}`;
+            const storedPw = localStorage.getItem(pwKey);
+            if (storedPw && storedPw !== pw) {
+                alert("비밀번호가 맞지 않습니다!");
+                return;
+            }
+            const key = `aov_titles_${cls}_${num}_${name}`;
+            const stored = localStorage.getItem(key);
+            if (!stored) {
+                alert("저장된 칭호 기록이 없습니다. 게임을 완료하면 자동으로 기록됩니다.");
+                return;
+            }
+            const titles = JSON.parse(stored);
+            const seen = new Set();
+            const unique = titles.filter(function(t) { if (seen.has(t.title)) return false; seen.add(t.title); return true; });
+            alert("[ " + name + " 의 칭호 컬렉션 — " + unique.length + "개 ]\n\n" + unique.map(function(t,i){ return (i+1) + ". " + t.title + "\n   " + t.date; }).join('\n\n'));
+        }
+    </script>
+</div>
+</div>
+</body>
+</html>
