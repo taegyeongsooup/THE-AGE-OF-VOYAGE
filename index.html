@@ -563,12 +563,12 @@
             </div>
             
             <h2 class="header-title text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text mb-2 tracking-tight" style="background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                대항해 시대: 운명을 건 항해
+                대항해 시대: 운명을 건 항해(1.1v)
             </h2>
             <p class="text-slate-300 max-w-2xl text-sm sm:text-base mb-3 leading-relaxed px-4">
                 16세기, 유럽의 야심 찬 선장들이 미지의 신대륙과 인도를 향해 닻을 올립니다.<br>
                 <strong class="text-amber-400">1,000 레알</strong>을 쥔 스페인의 거상 투자자가 되어, 8척의 탐험 선단에 나누어 투자하십시오.<br>
-                변동하는 상황 속에서 최대의 부를 창조하고 명예를 드높이시길 바랍니다!
+                변동하는 상황 속에서 최대의 부를 창조하고 명예를 드높이시길 바랍니다!<br>
             </p>
 
             <!-- Player Identity Form (반/번호/이름 입력) -->
@@ -616,7 +616,7 @@
                         </h3>
                         <div class="flex items-center gap-2">
                             <button onclick="showMyTitles()" class="text-[12px] text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 border border-amber-700/40 rounded-lg px-2 py-0.5">
-                                <i class="fa-solid fa-medal"></i> 나의 칭호 보기
+                                <i class="fa-solid fa-book-open"></i> 칭호 컬렉션
                             </button>
                             <button onclick="loadHallOfFame()" class="text-[12px] text-slate-400 hover:text-amber-400 font-semibold flex items-center gap-1">
                                 <i class="fa-solid fa-arrows-rotate" id="hof-refresh-icon"></i> 갱신
@@ -1224,8 +1224,8 @@
             {
                 title: "[전쟁 돌발] 해적 드레이크의 불법 사략 함대 기습 제안",
                 desc: "카리브 연안에 정박한 에스파냐 황금 보물 수송선을 공동 기습해 금화를 탈취하자는 드레이크 선장의 사략 동맹 비밀 전갈이 도달했습니다.",
-                opt1: "용병 무장 보급금 50 레알을 헌납한다. [정향선 배율 격증, 단 은 수송선 성공확률 폭락]",
-                opt2: "도적질에는 동참하지 않는다. [지중해 전통 안정 교역망 평판 급등 및 확률 증가]",
+                opt1: "용병 무장 보급금 50 레알을 헌납한다. [정향을 태운 선박 배율 급증, 은 수송선 성공확률 폭락]",
+                opt2: "도적질에는 동참하지 않는다. [전통적으로 이용하던 지중해 교역망 평판 급등 및 확률 증가]",
                 action: (choice) => {
                     if (choice === 1) {
                         if (cash < 50) return "자금난으로 인해 해적과의 밀약이 파기되었습니다.";
@@ -1958,7 +1958,7 @@
             if (isFirstPrep) {
                 // 게임 첫 진입 0라운드 준비안내문
                 roundEl.innerText = "출항 준비 단계";
-                titleEl.innerText = "⚓ 최초의 자본 투자 연합 선단, 항해 준비!";
+                titleEl.innerText = "⚓ 항해 준비!";
                 descEl.innerText = "유럽 최고의 항구 리스본에 황금과 향료, 은광석의 꿈을 한몸에 담은 8척의 상선단이 집결했습니다. 국왕 승인 하에 시세가 동결된 '출항 준비 단계'가 개시됩니다. 현재 모든 주식 가격은 50레알입니다. 안전하게 분산 투자하고, 상황에 맞게 주식을 거래하십시오.";
                 optionsContainer.classList.add('hidden');
                 closeBtn.classList.remove('hidden');
@@ -2333,7 +2333,9 @@
                                 <span class="text-slate-500 flex-shrink-0" style="color:#7a5c2e;">수량</span>
                                 <input type="number" id="qty-${shipId}" min="1" value="1"
                                     style="width:52px;background:rgba(255,255,255,0.6);border:1px solid rgba(139,90,43,0.4);border-radius:6px;padding:2px 4px;text-align:center;font-weight:700;color:#1a0f00;font-size:11px;"
-                                    oninput="this.value=Math.max(1,Math.floor(this.value)||1); document.getElementById('cost-${shipId}').textContent=(parseInt(this.value)||1)*calculateSharePrice(ships['${shipId}'])+'레알';">
+                                    oninput="(function(el){ var v=parseInt(el.value); var cost=document.getElementById('cost-${shipId}'); if(v>=1){ cost.textContent=v*calculateSharePrice(ships['${shipId}'])+'레알'; } else { cost.textContent='-'; } })(this)"
+                                    onblur="if(!this.value||parseInt(this.value)<1){this.value=1;}"
+                                    inputmode="numeric" pattern="[0-9]*">
                                 <button onclick="(function(){ const p=calculateSharePrice(ships['${shipId}']); const m=Math.floor(cash/p); if(m>0){document.getElementById('qty-${shipId}').value=m; document.getElementById('cost-${shipId}').textContent=m*p+'레알';} else{showCustomAlert('현금이 부족합니다!');} })()"
                                     style="background:rgba(200,150,12,0.20);color:#7c3a00;border:1px solid rgba(200,150,12,0.4);border-radius:6px;padding:2px 6px;font-size:10px;font-weight:700;cursor:pointer;">
                                     최대
@@ -2734,6 +2736,7 @@
                 finalAssets: finalAssets, grade: grade,
                 title: earnedTitle.title,
                 allTitles: earnedTitles.map(function(t){ return t.title; }).join(' / '),
+                titles: earnedTitles.map(function(t){ return t.title; }),
                 cash: Math.round(cash), payout: Math.round(totalVoyagePayout),
                 distinctShipsInvested: distinctShipsInvested, ethicalScore: ethicalScore,
                 unethicalInvested: Math.round(totalInvestedInUnethical),
@@ -3039,6 +3042,18 @@
             "평범한 시장의 관찰자": 1
         };
         function getTitleRarity(title) { return TITLE_RARITY[title] || 5; }
+
+        // 경험치: 칭호 희귀도의 합산
+        function calcExpAndLevel(titleList) {
+            var totalExp = 0;
+            titleList.forEach(function(t) { totalExp += getTitleRarity(t) * 10; });
+            // 레벨: exp^0.55 / 4 (완만한 성장)
+            var level = Math.floor(Math.pow(totalExp, 0.55) / 4) + 1;
+            var nextLvExp = Math.round(Math.pow((level) * 4, 1/0.55));
+            var prevLvExp = level > 1 ? Math.round(Math.pow((level-1)*4, 1/0.55)) : 0;
+            var pct = nextLvExp > prevLvExp ? Math.min(100, Math.round((totalExp - prevLvExp)/(nextLvExp - prevLvExp)*100)) : 100;
+            return { level: level, exp: totalExp, pct: pct, nextLvExp: nextLvExp };
+        }
         function getTitleRarityLabel(rarity) {
             if (rarity >= 90) return { label: 'SSS', color: '#ff6b35' };
             if (rarity >= 75) return { label: 'SS',  color: '#f59e0b' };
@@ -3093,7 +3108,7 @@
                 const titlesArr = Array.isArray(s.titles) ? s.titles : [];
                 // 최근 3개 칭호 (뱃지)
                 // 희귀도 높은 순 상위 3개
-                var recent3 = titlesArr.slice().sort(function(a,b){ return getTitleRarity(b)-getTitleRarity(a); }).slice(0,3);
+                var recent3 = (titlesArr||[]).slice().sort(function(a,b){ return getTitleRarity(b)-getTitleRarity(a); }).slice(0,3);
                 const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx+1}`;
                 const gradeColor = gradeColors[s.bestGrade] || '#9ca3af';
                 // 전체 칭호 hover tooltip
@@ -3114,10 +3129,22 @@
                             <span class="hof-tooltip">${allTitlesStr}</span>
                         </span>
                     </div>
-                    <div class="flex items-center gap-1 flex-wrap" style="padding-left:20px;">
-                        <span class="text-[10px] font-bold px-1.5 py-0.5 rounded" style="background:${gradeColor}22;color:${gradeColor};border:1px solid ${gradeColor}44;">${s.bestGrade}등급</span>
-                        ${badgesHtml}
-                    </div>
+                    ${(function(){
+                        var lv = calcExpAndLevel(titlesArr);
+                        var topRarity = titlesArr.length ? getTitleRarityLabel(getTitleRarity(titlesArr.slice().sort(function(a,b){return getTitleRarity(b)-getTitleRarity(a);})[0])) : {label:'C',color:'#9ca3af'};
+                        var barW = lv.pct;
+                        return '<div style="padding-left:20px;">'
+                          + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap;">'
+                          + '<span style="background:'+topRarity.color+'22;color:'+topRarity.color+';border:1px solid '+topRarity.color+'55;border-radius:4px;padding:1px 6px;font-size:9px;font-weight:900;">'
+                          + '최고 ['+topRarity.label+']</span>'
+                          + '<span style="background:rgba(44,26,4,0.15);color:#5c3d11;border:1px solid rgba(92,61,17,0.3);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:700;">'
+                          + 'Lv.'+lv.level+' ('+lv.exp+'exp)</span>'
+                          + '</div>'
+                          + '<div style="background:rgba(200,150,12,0.15);border-radius:4px;height:4px;width:100%;overflow:hidden;margin-bottom:4px;">'
+                          + '<div style="background:linear-gradient(90deg,#c8960c,#f59e0b);height:100%;width:'+barW+'%;border-radius:4px;"></div></div>'
+                          + badgesHtml
+                          + '</div>';
+                    })()}
                 </div>`;
             }).join('');
         }
@@ -3236,36 +3263,127 @@
             document.getElementById('tab-return').classList.toggle('active', tab === 'return');
         }
 
-        // 나의 칭호 보기 (로컬 기록)
+        // 전체 칭호 목록 (모든 존재 칭호 + 내가 획득한 것 표시)
+        const ALL_TITLES_LIST = [
+            // SSS
+            {title:"대항해시대 바다의 황제", rarity:100},
+            {title:"대항해시대의 조지 소로스", rarity:95},
+            // SS
+            {title:"신항로의 살아있는 전설", rarity:88},
+            {title:"하이리스크 하이리턴 레이서", rarity:85},
+            {title:"절체절명의 역전 드라마", rarity:82},
+            {title:"마젤란의 후계자", rarity:80},
+            // S
+            {title:"리스본 증권거래소의 제왕", rarity:75},
+            {title:"동인도 무역의 떠오르는 거성", rarity:72},
+            {title:"폭풍을 뚫은 대박 투자자", rarity:70},
+            {title:"목숨을 건 올인 도박사", rarity:68},
+            {title:"팔방미인 전천후 투자자", rarity:66},
+            {title:"무사귀환의 선단장", rarity:64},
+            {title:"향료와 은의 이중 제왕", rarity:62},
+            {title:"윤리적 사회적 공헌가 (ESG 선구자)", rarity:60},
+            // A
+            {title:"황금 나침반을 쥔 항해 투자자", rarity:55},
+            {title:"동방 비단길의 마지막 도박사", rarity:53},
+            {title:"향료 군도의 숨은 권력자", rarity:51},
+            {title:"포토시 은광의 진짜 주인", rarity:49},
+            {title:"신대륙 구황식물 보급왕", rarity:47},
+            {title:"인도 후추 무역의 선구자", rarity:45},
+            {title:"카리브해 설탕 농장의 큰손", rarity:43},
+            {title:"리스본 항구의 떠오르는 큰손", rarity:40},
+            {title:"움직이는 인간 포트폴리오", rarity:38},
+            {title:"단 하나의 별을 따른 자", rarity:36},
+            {title:"안전제일 리스크 관리자", rarity:34},
+            {title:"위험을 먹고 사는 모험가", rarity:34},
+            // B
+            {title:"대서양 무역의 안정적 강자", rarity:30},
+            {title:"신항로 개척의 유망주", rarity:28},
+            {title:"포르투갈 왕실 인증 유능한 상인", rarity:26},
+            {title:"집중투자 신봉자", rarity:24},
+            {title:"선택과 집중의 이원 전략가", rarity:22},
+            {title:"삼각편대 전략가", rarity:22},
+            {title:"균형 잡힌 분산투자 모범생", rarity:20},
+            {title:"불굴의 장기 보유자", rarity:20},
+            {title:"부지런한 시장의 개미", rarity:18},
+            {title:"꾸준한 정석 투자자", rarity:16},
+            {title:"재빠른 손절의 달인", rarity:15},
+            {title:"쉴 새 없는 손가락의 단타 승부사", rarity:14},
+            {title:"한번 사면 절대 안 파는 장기 신봉자", rarity:14},
+            {title:"철저한 배금주의자", rarity:13},
+            {title:"악명 높은 해적 자본가", rarity:13},
+            {title:"영혼 없는 냉혈 자본가", rarity:12},
+            // C
+            {title:"완벽한 평화 본전치기 선구자", rarity:10},
+            {title:"성공적인 첫 항해를 마친 신참 거상", rarity:9},
+            {title:"잔잔한 파도 위의 알찬 수익가", rarity:8},
+            {title:"현금이 왕이다", rarity:7},
+            {title:"지중해의 애처로운 망령", rarity:7},
+            {title:"저주받은 항로의 선주", rarity:6},
+            {title:"풍랑 속 생존자", rarity:6},
+            {title:"원금 수성에 성공한 신중론자", rarity:5},
+            {title:"절반의 손실을 막아낸 침착한 투자자", rarity:4},
+            {title:"쓰라린 교훈을 얻은 견습 상인", rarity:3},
+            {title:"풍랑에 휩쓸린 비운의 선주", rarity:2},
+            {title:"바다 밑바닥 개척의 기부천사", rarity:2},
+            {title:"바다의 기부 천사 (알거지)", rarity:2},
+            {title:"항구를 떠나지 않은 겁쟁이", rarity:1},
+            {title:"구경꾼 거상", rarity:1},
+            {title:"평범한 시장의 관찰자", rarity:1},
+        ];
+
         function showMyTitles() {
             const cls = document.getElementById('input-player-class').value.trim();
             const num = document.getElementById('input-player-number').value.trim();
             const name = document.getElementById('input-player-name').value.trim();
             const pw = document.getElementById('input-player-pw').value.trim();
-            if (!cls || !num || !name) {
-                alert("반, 번호, 이름을 먼저 입력하세요!");
-                return;
-            }
-            if (!pw) {
-                alert("비밀번호를 입력해야 나의 칭호를 볼 수 있습니다!");
-                return;
-            }
+            if (!cls || !num || !name) { alert("반, 번호, 이름을 먼저 입력하세요!"); return; }
+            if (!pw) { alert("비밀번호를 입력해야 칭호 컬렉션을 볼 수 있습니다!"); return; }
             const pwKey = `aov_pw_${cls}_${num}_${name}`;
             const storedPw = localStorage.getItem(pwKey);
-            if (storedPw && storedPw !== pw) {
-                alert("비밀번호가 맞지 않습니다!");
-                return;
-            }
+            if (storedPw && storedPw !== pw) { alert("비밀번호가 맞지 않습니다!"); return; }
+
             const key = `aov_titles_${cls}_${num}_${name}`;
-            const stored = localStorage.getItem(key);
-            if (!stored) {
-                alert("저장된 칭호 기록이 없습니다. 게임을 완료하면 자동으로 기록됩니다.");
-                return;
-            }
-            const titles = JSON.parse(stored);
-            const seen = new Set();
-            const unique = titles.filter(function(t) { if (seen.has(t.title)) return false; seen.add(t.title); return true; });
-            alert("[ " + name + " 의 칭호 컬렉션 — " + unique.length + "개 ]\n\n" + unique.map(function(t,i){ return (i+1) + ". " + t.title + "\n   " + t.date; }).join('\n\n'));
+            let myTitleSet = new Set();
+            try {
+                const stored = JSON.parse(localStorage.getItem(key) || '[]');
+                stored.forEach(function(t){ if(t.title) myTitleSet.add(t.title); });
+            } catch(e){}
+
+            const lv = calcExpAndLevel(Array.from(myTitleSet));
+
+            // 모달 생성
+            const existing = document.getElementById('title-collection-modal');
+            if (existing) existing.remove();
+
+            const modal = document.createElement('div');
+            modal.id = 'title-collection-modal';
+            modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
+            
+            let rows = '';
+            ALL_TITLES_LIST.forEach(function(entry) {
+                const rl = getTitleRarityLabel(entry.rarity);
+                const owned = myTitleSet.has(entry.title);
+                rows += '<div style="display:flex;align-items:center;gap-8px;padding:5px 8px;border-radius:6px;margin-bottom:3px;background:' + (owned ? 'rgba(200,150,12,0.12)' : 'rgba(0,0,0,0.15)') + ';opacity:' + (owned ? '1' : '0.38') + ';">'
+                  + '<span style="min-width:32px;font-size:9px;font-weight:900;color:'+rl.color+';background:'+rl.color+'22;border:1px solid '+rl.color+'44;border-radius:3px;padding:1px 4px;text-align:center;">['+rl.label+']</span>'
+                  + '<span style="font-size:11px;color:' + (owned ? '#2c1a04' : '#9e7a4a') + ';font-weight:' + (owned ? '700' : '400') + ';margin-left:6px;">'
+                  + (owned ? '✅ ' : '🔒 ') + entry.title + '</span>'
+                  + '</div>';
+            });
+
+            modal.innerHTML = '<div style="background:linear-gradient(145deg,#f5edd6,#ede0c0);border:2px solid rgba(139,90,43,0.5);border-radius:16px;width:100%;max-width:480px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;">'
+              + '<div style="padding:14px 16px 10px;border-bottom:1px solid rgba(139,90,43,0.25);display:flex;align-items:center;justify-content:space-between;">'
+              + '<div>'
+              + '<div style="font-weight:900;font-size:14px;color:#3d1a00;">📖 ' + name + '의 칭호 컬렉션</div>'
+              + '<div style="font-size:11px;color:#7a5c2e;margin-top:2px;">'
+              + myTitleSet.size + ' / ' + ALL_TITLES_LIST.length + '개 획득 &nbsp;·&nbsp; Lv.' + lv.level + ' &nbsp;·&nbsp; ' + lv.exp + ' exp</div>'
+              + '</div>'
+              + '<button onclick="document.getElementById('title-collection-modal').remove()" style="font-size:18px;color:#7a5c2e;background:none;border:none;cursor:pointer;padding:0 4px;">✕</button>'
+              + '</div>'
+              + '<div style="overflow-y:auto;padding:10px 12px;">' + rows + '</div>'
+              + '</div>';
+            
+            document.body.appendChild(modal);
+            modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
         }
     </script>
 </div>
