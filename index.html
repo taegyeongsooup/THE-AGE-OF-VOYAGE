@@ -618,8 +618,8 @@
 
     <!-- App Header -->
     <header id="main-header" class="border-b border-slate-800/80 backdrop-blur-md px-4 py-2 h-[65px] flex items-center shrink-0 z-30" style="background: linear-gradient(135deg, rgba(28,14,2,0.97), rgba(44,26,4,0.95)); display:none;">
-        <div class="w-full flex items-center gap-3">
-            <!-- 타이틀 (왼쪽 고정) -->
+        <div class="w-full flex items-center gap-3 min-w-0">
+            <!-- 타이틀 + 인적사항 (왼쪽 고정) -->
             <div class="flex items-center gap-2 shrink-0">
                 <div class="p-1.5 rounded-xl shadow-lg text-amber-200" style="background: linear-gradient(135deg, #8b4513, #c8960c); box-shadow: 0 4px 12px rgba(200,150,12,0.25);">
                     <i class="fa-solid fa-ship text-base animate-pulse"></i>
@@ -630,10 +630,15 @@
                     </h1>
                     <p class="text-[9px] uppercase tracking-widest font-semibold hidden sm:block" style="color:#9e7a4a;">신항로 개척, 운명을 건 항해에 투자하라!</p>
                 </div>
+                <!-- 인적사항 칸 -->
+                <div id="player-info-badge" style="display:none;background:rgba(200,150,12,0.13);border:1px solid rgba(200,150,12,0.40);border-radius:8px;padding:3px 10px;margin-left:4px;">
+                    <span style="font-size:10px;color:#9e7a4a;font-weight:700;" id="player-info-class"></span>
+                    <span style="font-size:12px;color:#f59e0b;font-weight:900;margin-left:4px;" id="player-info-name"></span>
+                </div>
             </div>
 
-            <!-- 뽑아둔 황금열쇠 효과 버튼들 -->
-            <div id="drawn-effects-area" style="display:none;flex:1;display:flex;flex-wrap:wrap;gap:4px;align-items:center;max-width:480px;min-width:0;">
+            <!-- 뽑아둔 황금열쇠 효과 버튼들 (가운데 영역) -->
+            <div id="drawn-effects-area" style="display:none;flex:1;flex-wrap:wrap;gap:4px;align-items:center;min-width:0;overflow:hidden;">
                 <!-- JS로 동적 렌더링 -->
             </div>
             
@@ -707,7 +712,7 @@
             </div>
             
             <h2 class="header-title text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text mb-2 tracking-tight" style="background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                대항해 시대: 운명을 건 항해(2.9v)
+                대항해 시대: 운명을 건 항해(3.0v)
             </h2>
             <p class="text-slate-300 max-w-2xl text-sm sm:text-base mb-3 leading-relaxed px-4">
                 16세기, 유럽의 야심 찬 선장들이 미지의 신대륙과 인도를 향해 닻을 올립니다.<br>
@@ -1809,6 +1814,21 @@
             playerClass = classVal;
             playerNumber = numberVal;
             playerName = nameVal;
+
+            // 마지막 입력값 저장 (다음 접속 시 자동 복원용, 비밀번호 제외)
+            try {
+                localStorage.setItem('aov_last_player', JSON.stringify({ cls: classVal, name: nameVal }));
+            } catch(e) {}
+
+            // 인적사항 배지 표시
+            const piBadge = document.getElementById('player-info-badge');
+            const piClass = document.getElementById('player-info-class');
+            const piName  = document.getElementById('player-info-name');
+            if (piBadge && piClass && piName) {
+                piClass.textContent = classVal + '반';
+                piName.textContent  = nameVal;
+                piBadge.style.display = '';
+            }
 
             playSound('click');
             document.getElementById('screen-lobby').classList.add('hidden');
@@ -3692,6 +3712,13 @@
             if (sfxSlider) { sfxSlider.value = Math.round(sfxVolume * 100); }
             if (bgmVal)    { bgmVal.textContent = Math.round(bgmVolume * 100) + '%'; }
             if (sfxVal)    { sfxVal.textContent = Math.round(sfxVolume * 100) + '%'; }
+
+            // 마지막 입력값 자동 복원 (반·이름만, 비밀번호는 복원 안 함)
+            try {
+                const last = JSON.parse(localStorage.getItem('aov_last_player') || '{}');
+                if (last.cls)  document.getElementById('input-player-class').value = last.cls;
+                if (last.name) document.getElementById('input-player-name').value  = last.name;
+            } catch(e) {}
         });
 
         document.addEventListener('mouseover', function(e) {
@@ -3759,6 +3786,8 @@
             document.getElementById('screen-voyage').classList.add('hidden');
             document.getElementById('screen-lobby').classList.remove('hidden');
             document.getElementById('main-header').style.display = 'none';
+            const piBadge = document.getElementById('player-info-badge');
+            if (piBadge) piBadge.style.display = 'none';
 
             // 플레이어 입력 폼은 유지 (같은 학생이 재도전하는 경우가 많으므로 비우지 않음)
             document.getElementById('player-form-error').classList.add('hidden');
@@ -3894,9 +3923,8 @@
             const perPlay = getPerPlayKeys(currentLevel);
             if (perPlay > 0) {
                 goldenKeys += perPlay;
-                saveGoldenKeys();
-                updateGoldenKeyUI(); // ← UI 즉시 반영
-                // 결과 화면에서도 잘 보이도록 약간 딜레이 후 알림
+                saveGoldenKeys(); // 로컬 + 시트 저장
+                updateGoldenKeyUI();
                 setTimeout(() => {
                     showCustomAlert(`🗝️ 황금 열쇠 ${perPlay}개 지급! (Lv.${currentLevel} 보너스, 총 ${goldenKeys}개)`);
                 }, 800);
@@ -3940,13 +3968,21 @@
                 const res = await fetch(`${SHEET_WEBHOOK_URL}?action=getKeys&cls=${encodeURIComponent(cls)}&num=${encodeURIComponent(num)}&name=${encodeURIComponent(name)}`);
                 const data = await res.json();
                 const sheetKeys = parseInt(data.goldenKeys || 0);
-                // 시트 값과 로컬 값 중 더 큰 값 사용
-                if (sheetKeys > goldenKeys) {
-                    goldenKeys = sheetKeys;
-                    const key = `aov_goldenKeys_${cls}_${num}_${name}`;
-                    localStorage.setItem(key, goldenKeys);
+                const localKey = `aov_goldenKeys_${cls}_${num}_${name}`;
+                const localKeys = parseInt(localStorage.getItem(localKey) || '0');
+                // 시트와 로컬 중 더 큰 값 사용 (지급 직후 로컬이 더 클 수 있음)
+                const merged = Math.max(sheetKeys, localKeys);
+                if (merged !== localKeys) {
+                    goldenKeys = merged;
+                    localStorage.setItem(localKey, merged);
+                } else {
+                    goldenKeys = localKeys;
                 }
-            } catch(e) {}
+            } catch(e) {
+                // 네트워크 오류 시 로컬값 유지
+                const localKey = `aov_goldenKeys_${cls}_${num}_${name}`;
+                goldenKeys = parseInt(localStorage.getItem(localKey) || '0');
+            }
         }
 
         function updateGoldenKeyUI() {
