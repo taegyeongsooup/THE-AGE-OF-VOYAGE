@@ -44,27 +44,31 @@
         .header-title {
             font-family: 'Cinzel', 'Noto Sans KR', serif;
         }
-        /* 투자 중인(보유 중인) 선박 카드 - 테두리 발광 효과 + 배경 강조 */
+        /* 투자 중인(보유 중인) 선박 카드 - 초록 발광 효과 + 배경 강조 */
         @keyframes owned-glow {
-            0%, 100% { box-shadow: 0 0 8px 2px rgba(200, 150, 12, 0.70), inset 0 0 16px rgba(200, 150, 12, 0.18); }
-            50% { box-shadow: 0 0 28px 8px rgba(200, 150, 12, 1.0), inset 0 0 30px rgba(200, 150, 12, 0.30); }
+            0%, 100% { box-shadow: 0 0 8px 2px rgba(34, 197, 94, 0.65), inset 0 0 16px rgba(34, 197, 94, 0.14); }
+            50% { box-shadow: 0 0 28px 8px rgba(34, 197, 94, 0.98), inset 0 0 28px rgba(34, 197, 94, 0.24); }
         }
         .ship-card.is-owned {
-            border-color: rgba(200, 150, 12, 0.95) !important;
+            border-color: rgba(34, 197, 94, 0.92) !important;
             border-width: 2px !important;
             animation: owned-glow 2.0s ease-in-out infinite;
-            background: linear-gradient(145deg, #fff3c4, #fde68a, #f5d060) !important;
+            background: linear-gradient(145deg, #d1fae5, #a7f3d0, #6ee7b7) !important;
         }
-        /* 투자 중인 카드 내부 구분선 색 강조 */
+        /* 투자 중인 카드 내부 배경 */
         .ship-card.is-owned .bg-slate-950\/40 {
-            background: rgba(180, 120, 0, 0.18) !important;
+            background: rgba(6, 95, 70, 0.15) !important;
         }
         .ship-card.is-owned .bg-slate-950\/60 {
-            background: rgba(180, 120, 0, 0.15) !important;
+            background: rgba(6, 95, 70, 0.12) !important;
         }
-        /* 투자 선박 카드 텍스트 색 유지 */
+        /* 투자 선박 카드 텍스트 가독성 */
         .ship-card.is-owned h4 {
-            color: #1a0f00 !important;
+            color: #064e3b !important;
+        }
+        .ship-card.is-owned .text-slate-500,
+        .ship-card.is-owned .text-slate-400 {
+            color: #065f46 !important;
         }
         /* 손익 컬러 규칙: 이득(빨강) / 손해(파랑) - 사용자 요청 반영 */
         .pnl-profit { color: #f87171 !important; }
@@ -696,7 +700,7 @@
             </div>
             
             <h2 class="header-title text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text mb-2 tracking-tight" style="background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                대항해 시대: 운명을 건 항해(2.7v)
+                대항해 시대: 운명을 건 항해(2.6v)
             </h2>
             <p class="text-slate-300 max-w-2xl text-sm sm:text-base mb-3 leading-relaxed px-4">
                 16세기, 유럽의 야심 찬 선장들이 미지의 신대륙과 인도를 향해 닻을 올립니다.<br>
@@ -1048,7 +1052,7 @@
         // 아래 URL을 본인의 Google Apps Script 웹앱 배포 URL로 교체하세요.
         // (Google Sheets > 확장 프로그램 > Apps Script 에서 webhook 코드를 배포한 뒤 "웹앱 URL"을 붙여넣으면
         //  게임 결과 제출 시 자동으로 칭호 기록이 시트에 누적되고, 로비 화면의 명예의 전당 TOP10도 이 URL에서 데이터를 읽어옵니다.)
-        const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycby4nr56Xq8i8-GV4A_4yrnearvtJgzV6h4gOkkWLh0OJQV27_f7v_2xVSFWjwVP_SwS/exec"
+        const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxAGq1N9ak_RV4mY0iOcYYF3yMAdJ8KvG5g7vZLu5QzGkMQQF48NmsV7MzH_bbQVmz2/exec"
 
         // ----------------------------------------------------
         // PLAYER IDENTITY (반 / 번호 / 이름)
@@ -3285,7 +3289,7 @@
             });
         }
 
-        // 로비 화면의 칭호 수집 명예의 전당(TOP10) 로드: 같은 칭호를 가장 많이 모은 순서로 표시
+        // 로비 화면의 칭호 수집 명예의 전당(TOP10) 로드
         function loadHallOfFame() {
             const listEl = document.getElementById('hall-of-fame-list');
             const icon = document.getElementById('hof-refresh-icon');
@@ -3296,18 +3300,39 @@
                 return;
             }
 
+            listEl.innerHTML = `<p class="text-slate-500 text-[12px] text-center py-3"><i class="fa-solid fa-spinner animate-spin mr-1"></i> 명예의 전당을 불러오는 중...</p>`;
             if (icon) icon.classList.add('animate-spin');
-            fetch(`${SHEET_WEBHOOK_URL}?action=hof`, { method: 'GET' })
-                .then(res => res.json())
-                .then(records => {
-                    renderHallOfFame(records);
-                })
-                .catch(() => {
-                    listEl.innerHTML = `<p class="text-rose-400 text-[12px] text-center py-3">명부를 불러오지 못했습니다. (CORS 또는 네트워크 문제일 수 있습니다)</p>`;
-                })
-                .finally(() => {
-                    if (icon) icon.classList.remove('animate-spin');
-                });
+
+            // Apps Script GET은 리다이렉트 발생할 수 있으므로 no-cors 없이 직접 fetch
+            fetch(`${SHEET_WEBHOOK_URL}?action=hof&t=${Date.now()}`, {
+                method: 'GET',
+                redirect: 'follow'
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.text();
+            })
+            .then(text => {
+                // JSON 파싱 안전하게
+                let records;
+                try {
+                    records = JSON.parse(text);
+                } catch(e) {
+                    // 혹시 HTML 에러 페이지가 온 경우
+                    throw new Error('JSON 파싱 실패: ' + text.slice(0, 100));
+                }
+                if (!Array.isArray(records)) {
+                    // { error: ... } 형태로 온 경우
+                    throw new Error(records.error || '잘못된 응답 형식');
+                }
+                renderHallOfFame(records);
+            })
+            .catch(err => {
+                listEl.innerHTML = `<p class="text-rose-400 text-[12px] text-center py-3">⚠️ 명부를 불러오지 못했습니다.<br><span style="font-size:10px;opacity:0.7;">${err.message || 'CORS 또는 네트워크 오류'}</span></p>`;
+            })
+            .finally(() => {
+                if (icon) icon.classList.remove('animate-spin');
+            });
         }
 
 
@@ -3773,7 +3798,11 @@
             if (perPlay > 0) {
                 goldenKeys += perPlay;
                 saveGoldenKeys();
-                showCustomAlert(`🗝️ 황금 열쇠 ${perPlay}개 지급! (Lv.${currentLevel} 보너스, 총 ${goldenKeys}개)`);
+                updateGoldenKeyUI(); // ← UI 즉시 반영
+                // 결과 화면에서도 잘 보이도록 약간 딜레이 후 알림
+                setTimeout(() => {
+                    showCustomAlert(`🗝️ 황금 열쇠 ${perPlay}개 지급! (Lv.${currentLevel} 보너스, 총 ${goldenKeys}개)`);
+                }, 800);
             }
         }
 
