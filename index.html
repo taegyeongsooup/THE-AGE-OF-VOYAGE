@@ -438,6 +438,27 @@
 
     <!-- Audio Feedback Controller -->
     <script>
+        // ── 비밀번호 SHA-256 해시 ────────────────────────────
+        async function hashPw(pw) {
+            const buf = await crypto.subtle.digest(
+                'SHA-256', new TextEncoder().encode(pw)
+            );
+            return Array.from(new Uint8Array(buf))
+                .map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // 기존 평문 localStorage를 해시로 마이그레이션 (최초 1회)
+        async function migratePwIfNeeded(pwKey, plainPw) {
+            const stored = localStorage.getItem(pwKey);
+            if (!stored) return; // 저장값 없으면 스킵
+            // 64자리 hex면 이미 해시됨
+            if (/^[0-9a-f]{64}$/.test(stored)) return;
+            // 평문이면 해시로 교체
+            const hashed = await hashPw(stored);
+            localStorage.setItem(pwKey, hashed);
+        }
+        // ────────────────────────────────────────────────────
+
         let audioCtx = null;
         let sfxVolume = 0.7;   // 효과음 볼륨 (0~1)
         let bgmVolume = 0.4;   // 배경음 볼륨 (0~1)
@@ -513,6 +534,13 @@
                     note(523.25, 0,   0.5, 'sine', 0.10);
                     note(659.25, 0.1, 0.6, 'sine', 0.10);
                     note(1046.5, 0.2, 0.8, 'sine', 0.10);
+                } else if (type === 'golden_key') {
+                    // 황금 열쇠 사용 - 화려한 상승음
+                    note(523.25, 0,    0.15, 'sine',     0.12);
+                    note(659.25, 0.12, 0.28, 'sine',     0.12);
+                    note(783.99, 0.24, 0.40, 'sine',     0.12);
+                    note(1046.5, 0.36, 0.60, 'sine',     0.14);
+                    note(1318.5, 0.50, 0.80, 'triangle', 0.10);
                 } else if (type === 'fail') {
                     note(220, 0,   0.6, 'sawtooth', 0.12);
                     note(110, 0.3, 0.9, 'sawtooth', 0.14);
@@ -537,6 +565,12 @@
                     <p class="text-[10px] uppercase tracking-widest font-semibold" style="color:#9e7a4a;">신항로 개척, 운명을 건 항해에 투자하라!</p>
                 </div>
             </div>
+
+            <!-- 활성 황금 열쇠 효과 표시 -->
+            <div id="active-key-effect-banner" style="display:none;flex:1;max-width:320px;background:linear-gradient(135deg,rgba(200,150,12,0.18),rgba(245,158,11,0.08));border:1px solid rgba(200,150,12,0.45);border-radius:10px;padding:5px 12px;font-size:11px;color:#f59e0b;font-weight:700;line-height:1.4;">
+                <span style="font-size:10px;opacity:0.7;display:block;">🗝️ 활성 효과</span>
+                <span id="active-key-effect-text"></span>
+            </div>
             
             <!-- Dashboard Stats -->
             <div class="flex items-center gap-3 text-xs sm:text-sm">
@@ -548,6 +582,16 @@
                 <div class="rounded-lg px-3 py-1 flex items-center gap-1.5" style="background:rgba(28,12,2,0.85);border:1px solid rgba(139,90,43,0.5);">
                     <span class="text-slate-400 font-medium">진행 상황:</span>
                     <span class="text-blue-400 font-bold" id="dashboard-round">출항 준비 단계</span>
+                </div>
+                <!-- 황금 열쇠 -->
+                <div class="relative shrink-0">
+                    <button onclick="useGoldenKey()" id="golden-key-btn"
+                        style="background:rgba(60,50,40,0.6);color:#6b7280;border:1px solid rgba(100,80,60,0.4);font-size:11px;"
+                        class="px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 active:scale-95 transition"
+                        onmouseenter="showKeyTooltip()" onmouseleave="hideKeyTooltip()">
+                        🗝️ 황금 열쇠 <span id="golden-key-count" style="background:rgba(100,80,60,0.4);border-radius:999px;padding:0 6px;font-size:10px;">×0</span>
+                    </button>
+                    <div id="golden-key-tooltip" style="display:none;position:absolute;right:0;top:38px;z-index:300;background:linear-gradient(135deg,rgba(28,14,2,0.98),rgba(44,26,4,0.97));border:1px solid rgba(200,150,12,0.4);border-radius:10px;padding:12px 14px;min-width:240px;box-shadow:0 8px 32px rgba(0,0,0,0.7);font-size:11px;color:#e8d5a3;"></div>
                 </div>
                 <button onclick="quitGame()" style="background:rgba(127,29,29,0.75);color:#fca5a5;border:1px solid rgba(153,27,27,0.5);font-size:11px;" class="px-3 py-1 rounded-lg font-bold flex items-center gap-1.5 hover:brightness-110 active:scale-95 transition shrink-0">
                     <i class="fa-solid fa-flag text-[10px]"></i> 게임 포기하기
@@ -608,27 +652,24 @@
                     <h3 class="font-bold text-sm mb-3 flex items-center justify-center gap-2" style="color:#7a4a1a;">
                         <i class="fa-solid fa-id-card"></i> 승선 명부 작성 (칭호 기록용 필수 입력)
                     </h3>
-                    <div class="grid grid-cols-3 gap-2.5">
+                    <div class="grid grid-cols-2 gap-2.5">
                         <div class="text-left">
                             <label class="text-[12px] font-semibold block mb-1" style="color:#5c3d11;">반</label>
                             <input type="number" id="input-player-class" min="1" placeholder="예: 3" class="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-100 text-sm font-bold focus:outline-none focus:border-amber-500 placeholder:text-slate-600">
-                        </div>
-                        <div class="text-left">
-                            <label class="text-[12px] font-semibold block mb-1" style="color:#5c3d11;">번호</label>
-                            <input type="number" id="input-player-number" min="1" placeholder="예: 12" class="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-100 text-sm font-bold focus:outline-none focus:border-amber-500 placeholder:text-slate-600">
                         </div>
                         <div class="text-left">
                             <label class="text-[12px] font-semibold block mb-1" style="color:#5c3d11;">이름</label>
                             <input type="text" id="input-player-name" placeholder="예: 홍길동" class="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-100 text-sm font-bold focus:outline-none focus:border-amber-500 placeholder:text-slate-600">
                         </div>
                     </div>
+                    <input type="hidden" id="input-player-number" value="0">
                     <!-- 비밀번호 -->
                     <div class="mt-2.5 text-left">
                         <label class="text-[12px] text-slate-400 font-semibold block mb-1"><i class="fa-solid fa-lock text-amber-500"></i> 개인 비밀번호 <span class="text-slate-500 font-normal">(최초 설정 시 기억해두세요. 다음 플레이 시 동일 비밀번호 필요)</span></label>
                         <input type="password" id="input-player-pw" placeholder="비밀번호 4자리 이상" class="w-full px-3 py-2.5 rounded-lg bg-slate-950 border border-slate-700 text-slate-100 text-sm font-bold focus:outline-none focus:border-amber-500 placeholder:text-slate-600">
                         <p id="pw-hint" class="text-[11px] text-slate-500 mt-1 hidden"></p>
                     </div>
-                    <p id="player-form-error" class="hidden text-rose-400 text-[12px] font-bold mt-2"><i class="fa-solid fa-circle-exclamation"></i> 반, 번호, 이름, 비밀번호를 모두 입력해야 출항할 수 있습니다.</p>
+                    <p id="player-form-error" class="hidden text-rose-400 text-[12px] font-bold mt-2"><i class="fa-solid fa-circle-exclamation"></i> 반, 이름, 비밀번호를 모두 입력해야 출항할 수 있습니다.</p>
                 </div>
             </div>
 
@@ -1641,8 +1682,11 @@
         // ----------------------------------------------------
         // SCREEN TRANSITION WORKFLOW
         // ----------------------------------------------------
-        function startGame() {
+        async function startGame() {
             startBGM();
+            loadGoldenKeys();
+            loadGrantedKeyLevels();
+            updateGoldenKeyUI();
             const classVal = document.getElementById('input-player-class').value.trim();
             const numberVal = document.getElementById('input-player-number').value.trim();
             const nameVal = document.getElementById('input-player-name').value.trim();
@@ -1650,9 +1694,9 @@
             const errorEl = document.getElementById('player-form-error');
             const pwHint = document.getElementById('pw-hint');
 
-            if (!classVal || !numberVal || !nameVal || !pwVal) {
+            if (!classVal || !nameVal || !pwVal) {
                 errorEl.classList.remove('hidden');
-                showCustomAlert("반, 번호, 이름, 비밀번호를 모두 입력해야 출항할 수 있습니다!");
+                showCustomAlert("반, 이름, 비밀번호를 모두 입력해야 출항할 수 있습니다!");
                 return;
             }
             if (pwVal.length < 4) {
@@ -1662,16 +1706,18 @@
             }
             errorEl.classList.add('hidden');
 
-            // 비밀번호 검증 (localStorage)
+            // 비밀번호 해시 검증 (localStorage)
             const pwKey = `aov_pw_${classVal}_${numberVal}_${nameVal}`;
+            await migratePwIfNeeded(pwKey); // 기존 평문 → 해시 마이그레이션
             const storedPw = localStorage.getItem(pwKey);
+            const pwHash = await hashPw(pwVal);
             if (storedPw === null) {
-                // 최초 등록
-                localStorage.setItem(pwKey, pwVal);
+                // 최초 등록 (해시로 저장)
+                localStorage.setItem(pwKey, pwHash);
                 pwHint.textContent = "✅ 비밀번호가 등록되었습니다. 다음 플레이 시 동일한 비밀번호를 입력하세요.";
                 pwHint.className = "text-[11px] text-emerald-400 mt-1";
                 pwHint.classList.remove('hidden');
-            } else if (storedPw !== pwVal) {
+            } else if (storedPw !== pwHash) {
                 pwHint.textContent = "❌ 비밀번호가 맞지 않습니다. 이 계정으로 플레이하려면 올바른 비밀번호를 입력하세요.";
                 pwHint.className = "text-[11px] text-rose-400 mt-1";
                 pwHint.classList.remove('hidden');
@@ -1715,6 +1761,22 @@
         // STOCK TRANSACTION CONTROL (1주 단위 매수/매도, 평단가 추적)
         // ----------------------------------------------------
         function buyShares(shipId, qty) {
+            // 시세 조작 효과 처리
+            if (activeKeyEffect && activeKeyEffect.type === 'manipulation') {
+                const sName = ships[shipId] ? ships[shipId].name : shipId;
+                const confirmEl = document.createElement('div');
+                confirmEl.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:16px;';
+                confirmEl.innerHTML = `<div style="background:linear-gradient(145deg,#1c0e02,#2c1a04);border:2px solid rgba(200,150,12,0.5);border-radius:16px;width:100%;max-width:340px;padding:24px;text-align:center;">
+                    <div style="font-size:28px;margin-bottom:6px;">⚙️</div>
+                    <div style="font-weight:900;font-size:14px;color:#f59e0b;margin-bottom:8px;">시세 조작 적용</div>
+                    <div style="font-size:12px;color:#9e7a4a;margin-bottom:16px;"><b style="color:#e8d5a3">${sName}</b>의 성공률을 +20 부스트합니다.</div>
+                    <div style="display:flex;gap:10px;justify-content:center;">
+                        <button onclick="applyManipulation('${shipId}',this)" style="background:linear-gradient(135deg,#7a4a1a,#c8960c);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-weight:900;font-size:12px;cursor:pointer;">적용</button>
+                        <button onclick="this.closest('[style*=fixed]').remove()" style="background:rgba(60,50,40,0.8);color:#9e7a4a;border:1px solid rgba(100,80,60,0.4);border-radius:8px;padding:8px 20px;font-weight:700;font-size:12px;cursor:pointer;">취소</button>
+                    </div></div>`;
+                document.body.appendChild(confirmEl);
+                return;
+            }
             qty = Math.max(1, parseInt(qty) || 1);
             const currentPrice = calculateSharePrice(ships[shipId]);
 
@@ -1849,6 +1911,15 @@
 
         // 예고된 후보 중, 부여된 확률(가중치)에 따라 실제로 발생할 다음 상황 1개를 추첨
         function drawWeightedSituation() {
+            // 예언서 강제 지정
+            if (activeKeyEffect && activeKeyEffect.type === 'prophecy' && activeKeyEffect.forcedSitIndex !== undefined) {
+                const forced = situations[activeKeyEffect.forcedSitIndex];
+                setActiveKeyEffect(null);
+                if (forced) {
+                    usedSituationTitles.add(forced.title);
+                    return { situation: forced, index: activeKeyEffect.forcedSitIndex };
+                }
+            }
             if (currentForecastPool.length === 0) {
                 const fallback = situations.find(s => !usedSituationTitles.has(s.title)) || situations[0];
                 return { situation: fallback, index: situations.indexOf(fallback) };
@@ -1904,8 +1975,9 @@
                 const tooltipPos = (idx < 2)
                     ? 'top: calc(100% + 6px); bottom: auto;'
                     : 'bottom: calc(100% + 6px); top: auto;';
+                const sitIdx = situations.indexOf(p.situation);
                 const cardHTML = `
-                    <div class="forecast-card-wrap bg-slate-900/70 border border-slate-800 rounded-lg p-1.5 flex flex-col gap-0.5 cursor-help">
+                    <div class="forecast-card-wrap bg-slate-900/70 border border-slate-800 rounded-lg p-1.5 flex flex-col gap-0.5 cursor-help" onclick="selectProphecySituation(${sitIdx})">
                         <div class="forecast-tooltip" style="${tooltipPos}">${safeDesc}</div>
                         <div class="flex items-center justify-between">
                             <span class="text-[10px] font-black px-1.5 py-0.5 rounded border ${c.badge}">${p.weight}% 확률</span>
@@ -2147,9 +2219,10 @@
                 if (shipId === excludeShipId) continue;
                 if (ships[shipId]._ruined) continue;
 
-                // 확률 변동: -6 ~ +7 (상승 우세 비대칭)
+                // 확률 변동: -9 ~ +7 (황금 열쇠 도입으로 하락폭 확대)
                 // 이벤트 관련 선박은 글로벌 노이즈 방향을 이벤트 취지에 맞게 고정
-                let probDelta = Math.floor(Math.random() * 14) - 6;
+                // 시장 동결 효과 적용 중이면 노이즈 0
+                let probDelta = (activeKeyEffect && activeKeyEffect.type === 'market_fix') ? 0 : Math.floor(Math.random() * 17) - 9;
                 if (protection[shipId] === 'pos') probDelta = Math.abs(probDelta);
                 else if (protection[shipId] === 'neg') probDelta = -Math.abs(probDelta);
 
@@ -2220,6 +2293,11 @@
 
         // 신문 모달 닫기
         function closeNewspaperModal() {
+            // 시장 동결 1라운드 후 해제
+            if (activeKeyEffect && activeKeyEffect.type === 'market_fix') {
+                setActiveKeyEffect(null);
+                showCustomAlert('🗝️ 시장 동결 효과가 해제되었습니다.');
+            }
             const wasEventModal = pendingRoundAfterEvent !== null;
 
             document.getElementById('newspaper-modal').classList.add('hidden');
@@ -2637,6 +2715,12 @@
                 let payout = 0;
                 if (isSuccessful) {
                     payout = shares * currentPrice * s.currentMult;
+                } else if (activeKeyEffect && activeKeyEffect.type === 'insurance' && !activeKeyEffect._used) {
+                    // 보험 효과 - 첫 번째 실패 선박에 50% 환급
+                    payout = Math.round(shares * currentPrice * 0.5);
+                    activeKeyEffect._used = true;
+                    setActiveKeyEffect(null);
+                    setTimeout(() => showCustomAlert('🗝️ [보험] ' + s.name + ' 실패! 투자금의 50% (' + payout + '레알)가 환급됩니다.'), 500);
                 }
 
                 totalVoyagePayout += payout;
@@ -2812,6 +2896,14 @@
             localStorage.setItem(myTitlesKey, JSON.stringify(myTitles.slice(-50)));
 
             // 결과를 구글 스프레드시트로 제출 (칭호 수집 명부 기록)
+            // 레벨 업 열쇠 지급 체크
+            {
+                const myTitlesAll = [];
+                try { JSON.parse(localStorage.getItem(`aov_titles_${playerClass}_${playerNumber}_${playerName}`) || '[]').forEach(t => myTitlesAll.push(t.title||t)); } catch(e){}
+                const playCount = (myTitlesAll.length > 0 ? 1 : 0); // 최소 추정
+                const lvNow = calcExpAndLevel(myTitlesAll, playCount, finalAssets).level;
+                checkAndGrantKeys(lvNow);
+            }
             submitResultToSheet({
                 playerClass: playerClass, playerNumber: playerNumber, playerName: playerName,
                 finalAssets: finalAssets, grade: grade,
@@ -2995,7 +3087,7 @@
         // ----------------------------------------------------
         // GOOGLE SHEETS 결과 제출 & 명예의 전당(TOP10) 로드
         // ----------------------------------------------------
-        function submitResultToSheet(data) {
+        async function submitResultToSheet(data) {
             const statusEl = document.getElementById('sheet-submit-status');
             if (!SHEET_WEBHOOK_URL) {
                 if (statusEl) {
@@ -3005,6 +3097,7 @@
                 return;
             }
             const pwKey = `aov_pw_${data.playerClass}_${data.playerNumber}_${data.playerName}`;
+            // localStorage엔 이미 해시가 저장돼 있으므로 그대로 사용
             const pw = localStorage.getItem(pwKey) || '';
             // 칭호 배열 정리 (중복 제거)
             const titlesArray = Array.isArray(data.titles) && data.titles.length > 0
@@ -3128,14 +3221,23 @@
         function getTitleRarity(title) { return TITLE_RARITY[title] || 5; }
 
         // 경험치: 칭호 희귀도의 합산
-        function calcExpAndLevel(titleList) {
+        // calcExpAndLevel(titleList, playCount, totalAssetsSum)
+        // titleList: 획득 칭호 배열
+        // playCount: 총 플레이 횟수 (기본점 100/회)
+        // totalAssetsSum: 누적 최고 자산 합산 (1000레알 당 20exp)
+        function calcExpAndLevel(titleList, playCount, totalAssetsSum) {
             var totalExp = 0;
+            // 칭호 exp
             titleList.forEach(function(t) { totalExp += getTitleRarity(t) * 10; });
-            // 레벨: exp^0.55 / 4 (완만한 성장)
-            var level = Math.floor(Math.pow(totalExp, 0.55) / 4) + 1;
-            var nextLvExp = Math.round(Math.pow((level) * 4, 1/0.55));
-            var prevLvExp = level > 1 ? Math.round(Math.pow((level-1)*4, 1/0.55)) : 0;
-            var pct = nextLvExp > prevLvExp ? Math.min(100, Math.round((totalExp - prevLvExp)/(nextLvExp - prevLvExp)*100)) : 100;
+            // 기본 플레이 점수 (플레이당 100exp)
+            if (playCount) totalExp += Math.floor(playCount) * 100;
+            // 자산 보너스 (1000레알당 20exp, 최고 자산 기준)
+            if (totalAssetsSum) totalExp += Math.floor(totalAssetsSum / 1000) * 20;
+            // 레벨 계산 (최대 999)
+            var level = Math.min(999, Math.floor(Math.pow(totalExp, 0.52) / 3.2) + 1);
+            var nextLvExp = level < 999 ? Math.round(Math.pow((level) * 3.2, 1/0.52)) : Infinity;
+            var prevLvExp = level > 1 ? Math.round(Math.pow((level-1)*3.2, 1/0.52)) : 0;
+            var pct = (level >= 999) ? 100 : (nextLvExp > prevLvExp ? Math.min(100, Math.round((totalExp - prevLvExp)/(nextLvExp - prevLvExp)*100)) : 100);
             return { level: level, exp: totalExp, pct: pct, nextLvExp: nextLvExp };
         }
         function getTitleRarityLabel(rarity) {
@@ -3163,11 +3265,14 @@
                 if (!studentMap[key]) {
                     studentMap[key] = {
                         name: r.playerName, cls: r.playerClass, num: r.playerNumber,
-                        titles: new Set(), titleList: [], bestGrade: 'C', maxAssets: 0
+                        titles: new Set(), titleList: [], bestGrade: 'C', maxAssets: 0,
+                        playCount: 0, totalAssetsSum: 0
                     };
                 }
                 const assets = Number(r.maxAssets || r.finalAssets || 0);
                 if (assets > studentMap[key].maxAssets) studentMap[key].maxAssets = assets;
+                studentMap[key].playCount += 1;
+                studentMap[key].totalAssetsSum += assets;
                 // 고유 칭호 누적 (서버에서 titles 배열로 오거나 title 단일 필드로 옴)
                 const titles = Array.isArray(r.titles) ? r.titles : (r.title ? [r.title] : []);
                 titles.forEach(t => {
@@ -3183,59 +3288,101 @@
                 }
             });
 
-            const ranking = Object.values(studentMap)
+            const allStudents = Object.values(studentMap)
                 .map(s => {
-                    const lv = calcExpAndLevel(s.titleList);
-                    return { ...s, count: s.titles.size, titles: s.titleList, level: lv.level, exp: lv.exp, maxAssets: s.maxAssets || 0 };
-                })
+                    const lv = calcExpAndLevel(s.titleList, s.playCount, s.totalAssetsSum);
+                    return { ...s, count: s.titles.size, titles: s.titleList, level: lv.level, exp: lv.exp, pct: lv.pct, maxAssets: s.maxAssets || 0 };
+                });
+            const rankingByLevel = allStudents.slice()
                 .sort((a, b) => b.level !== a.level ? b.level - a.level : b.exp !== a.exp ? b.exp - a.exp : b.maxAssets - a.maxAssets)
+                .slice(0, 10);
+            const rankingByAssets = allStudents.slice()
+                .sort((a, b) => b.maxAssets - a.maxAssets)
                 .slice(0, 10);
 
             const gradeColors = { SS:'#f59e0b', S:'#a78bfa', A:'#34d399', B:'#60a5fa', C:'#9ca3af' };
 
-            listEl.innerHTML = ranking.map((s, idx) => {
-                const titlesArr = Array.isArray(s.titles) ? s.titles : [];
-                // 최근 3개 칭호 (뱃지)
-                // 희귀도 높은 순 상위 3개
-                var recent3 = (titlesArr||[]).slice().sort(function(a,b){ return getTitleRarity(b)-getTitleRarity(a); }).slice(0,3);
-                const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx+1}`;
-                const gradeColor = gradeColors[s.bestGrade] || '#9ca3af';
-                // 전체 칭호 hover tooltip
-                const allTitlesStr = titlesArr.length ? titlesArr.map((t,i) => `${i+1}. ${t}`).join('<br>') : '없음';
-                var badgesHtml = recent3.map(function(t) {
-                    var r = getTitleRarity(t); var rl = getTitleRarityLabel(r);
-                    return '<span style="background:'+rl.color+'18;color:'+rl.color+';border:1px solid '+rl.color+'55;border-radius:4px;padding:1px 5px;font-size:9px;white-space:nowrap;display:inline-block;margin-bottom:2px;"><b>['+rl.label+']</b> '+t+'</span>';
-                }).join(' ');
-                return `
-                <div class="rounded-lg px-2.5 py-1.5 mb-1" style="background:rgba(255,255,255,0.30); border:1px solid rgba(139,90,43,0.25);">
-                    <div class="flex items-center justify-between mb-0.5">
-                        <span class="text-[12px] font-bold flex items-center gap-1.5" style="color:#2c1a04;">
-                            <span class="w-5 text-center">${medal}</span>
-                            ${s.cls || s.playerClass}반 ${s.num || s.playerNumber}번 ${s.name || s.playerName}
-                        </span>
-                        <span class="hof-title-hover" style="color:${gradeColor};font-size:11px;font-weight:900;cursor:help;position:relative;">
-                            ${s.count}개 칭호 ▾
-                            <span class="hof-tooltip">${allTitlesStr}</span>
-                        </span>
-                    </div>
-                    ${(function(){
-                        var lv = calcExpAndLevel(titlesArr);
-                        var topRarity = titlesArr.length ? getTitleRarityLabel(getTitleRarity(titlesArr.slice().sort(function(a,b){return getTitleRarity(b)-getTitleRarity(a);})[0])) : {label:'C',color:'#9ca3af'};
-                        var barW = lv.pct;
-                        return '<div style="padding-left:20px;">'
-                          + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap;">'
-                          + '<span style="background:'+topRarity.color+'22;color:'+topRarity.color+';border:1px solid '+topRarity.color+'55;border-radius:4px;padding:1px 6px;font-size:9px;font-weight:900;">'
-                          + '최고 ['+topRarity.label+']</span>'
-                          + '<span style="background:rgba(44,26,4,0.15);color:#5c3d11;border:1px solid rgba(92,61,17,0.3);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:700;">'
-                          + 'Lv.'+lv.level+' ('+lv.exp+'exp)</span>'
-                          + '</div>'
-                          + '<div style="background:rgba(200,150,12,0.15);border-radius:4px;height:4px;width:100%;overflow:hidden;margin-bottom:4px;">'
-                          + '<div style="background:linear-gradient(90deg,#c8960c,#f59e0b);height:100%;width:'+barW+'%;border-radius:4px;"></div></div>'
-                          + badgesHtml
-                          + '</div>';
-                    })()}
-                </div>`;
-            }).join('');
+            // tooltip 요소 (공용)
+            if (!document.getElementById('hof-tooltip-el')) {
+                const tt = document.createElement('div');
+                tt.id = 'hof-tooltip-el';
+                tt.style.cssText = 'position:fixed;z-index:10001;background:rgba(28,14,2,0.97);color:#e8d5a3;border:1px solid rgba(200,150,12,0.5);border-radius:8px;padding:7px 11px;font-size:11px;max-width:260px;line-height:1.5;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,0.6);display:none;';
+                document.body.appendChild(tt);
+            }
+
+            function buildHofRows(ranking) {
+                return ranking.map(function(s, idx) {
+                    const titlesArr = Array.isArray(s.titles) ? s.titles : [];
+                    const recent3 = titlesArr.slice().sort(function(a,b){ return getTitleRarity(b)-getTitleRarity(a); }).slice(0,3);
+                    const medal = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : String(idx+1);
+                    const gradeColor = gradeColors[s.bestGrade] || '#9ca3af';
+                    const allTitlesStr = titlesArr.length ? titlesArr.map(function(t,i){ return (i+1)+'. '+t; }).join('<br>') : '없음';
+                    const badgesHtml = recent3.map(function(t) {
+                        var r = getTitleRarity(t); var rl = getTitleRarityLabel(r);
+                        var hof_hint = '';
+                        var found = ALL_TITLES_LIST.find(function(e){ return e.title === t; });
+                        if (found && found.hint) hof_hint = '📋 획득 조건: ' + found.hint;
+                        return '<span class="hof-badge-hint" data-hofhint="' + hof_hint.replace(/"/g,'&quot;') + '" style="background:'+rl.color+'18;color:'+rl.color+';border:1px solid '+rl.color+'55;border-radius:4px;padding:1px 5px;font-size:9px;white-space:nowrap;display:inline-block;margin-bottom:2px;cursor:help;"><b>['+rl.label+']</b> '+t+'</span>';
+                    }).join(' ');
+                    const topRarity = titlesArr.length ? getTitleRarityLabel(getTitleRarity(titlesArr.slice().sort(function(a,b){return getTitleRarity(b)-getTitleRarity(a);})[0])) : {label:'C',color:'#9ca3af'};
+                    return '<div class="rounded-lg px-2.5 py-1.5 mb-1" style="background:rgba(255,255,255,0.30);border:1px solid rgba(139,90,43,0.25);">'
+                      + '<div class="flex items-center justify-between mb-0.5">'
+                      + '<span class="text-[12px] font-bold flex items-center gap-1.5" style="color:#2c1a04;"><span class="w-5 text-center">'+medal+'</span>'
+                      + (s.cls||s.playerClass)+'반 '+(s.name||s.playerName)+'</span>'
+                      + '<span class="hof-title-hover" style="color:'+gradeColor+';font-size:11px;font-weight:900;cursor:help;position:relative;">'
+                      + s.count+'개 칭호 ▾<span class="hof-tooltip">'+allTitlesStr+'</span></span>'
+                      + '</div>'
+                      + '<div style="padding-left:20px;">'
+                      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap;">'
+                      + '<span style="background:'+topRarity.color+'22;color:'+topRarity.color+';border:1px solid '+topRarity.color+'55;border-radius:4px;padding:1px 6px;font-size:9px;font-weight:900;">최고 ['+topRarity.label+']</span>'
+                      + '<span style="background:rgba(44,26,4,0.15);color:#5c3d11;border:1px solid rgba(92,61,17,0.3);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:700;">Lv.'+s.level+' ('+s.exp+'exp)</span>'
+                      + '<span style="background:rgba(16,185,129,0.12);color:#34d399;border:1px solid rgba(52,211,153,0.3);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:700;">최고자산 '+s.maxAssets.toLocaleString()+'레알</span>'
+                      + '</div>'
+                      + '<div style="background:rgba(200,150,12,0.15);border-radius:4px;height:4px;width:100%;overflow:hidden;margin-bottom:4px;">'
+                      + '<div style="background:linear-gradient(90deg,#c8960c,#f59e0b);height:100%;width:'+s.pct+'%;border-radius:4px;"></div></div>'
+                      + badgesHtml
+                      + '</div></div>';
+                }).join('');
+            }
+
+            // 2탭 UI
+            const TAB_STYLE_ON  = 'font-size:11px;font-weight:900;padding:4px 12px;border-radius:8px 8px 0 0;cursor:pointer;border:1px solid rgba(200,150,12,0.5);border-bottom:none;background:rgba(200,150,12,0.2);color:#c8960c;';
+            const TAB_STYLE_OFF = 'font-size:11px;font-weight:700;padding:4px 12px;border-radius:8px 8px 0 0;cursor:pointer;border:1px solid transparent;background:transparent;color:#7a5c2e;';
+            listEl.innerHTML = `
+              <div style="display:flex;gap:4px;margin-bottom:-1px;">
+                <button id="hof-tab-lv" style="${TAB_STYLE_ON}" onclick="switchHofTab('lv')">🏆 레벨 랭킹</button>
+                <button id="hof-tab-asset" style="${TAB_STYLE_OFF}" onclick="switchHofTab('asset')">💰 최고 자산 랭킹</button>
+              </div>
+              <div style="border:1px solid rgba(200,150,12,0.3);border-radius:0 8px 8px 8px;padding:8px 4px 4px;">
+                <div id="hof-panel-lv">${buildHofRows(rankingByLevel)}</div>
+                <div id="hof-panel-asset" style="display:none;">${buildHofRows(rankingByAssets)}</div>
+              </div>`;
+
+            listEl.addEventListener('mousemove', function(e) {
+                const badge = e.target.closest('.hof-badge-hint');
+                const tt = document.getElementById('hof-tooltip-el');
+                if (badge && badge.dataset.hofhint) {
+                    tt.textContent = badge.dataset.hofhint;
+                    tt.style.display = 'block';
+                    let x = e.clientX + 14, y = e.clientY + 14;
+                    if (x + 270 > window.innerWidth) x = e.clientX - 275;
+                    if (y + 80 > window.innerHeight) y = e.clientY - 70;
+                    tt.style.left = x + 'px'; tt.style.top = y + 'px';
+                } else { tt.style.display = 'none'; }
+            });
+            listEl.addEventListener('mouseleave', function() {
+                const tt = document.getElementById('hof-tooltip-el');
+                if (tt) tt.style.display = 'none';
+            });
+        }
+
+        function switchHofTab(tab) {
+            const TAB_ON  = 'font-size:11px;font-weight:900;padding:4px 12px;border-radius:8px 8px 0 0;cursor:pointer;border:1px solid rgba(200,150,12,0.5);border-bottom:none;background:rgba(200,150,12,0.2);color:#c8960c;';
+            const TAB_OFF = 'font-size:11px;font-weight:700;padding:4px 12px;border-radius:8px 8px 0 0;cursor:pointer;border:1px solid transparent;background:transparent;color:#7a5c2e;';
+            document.getElementById('hof-tab-lv').style.cssText    = tab === 'lv'    ? TAB_ON : TAB_OFF;
+            document.getElementById('hof-tab-asset').style.cssText = tab === 'asset' ? TAB_ON : TAB_OFF;
+            document.getElementById('hof-panel-lv').style.display    = tab === 'lv'    ? '' : 'none';
+            document.getElementById('hof-panel-asset').style.display = tab === 'asset' ? '' : 'none';
         }
 
         // ----------------------------------------------------
@@ -3365,6 +3512,245 @@
                 `;
                 document.head.appendChild(style);
             }
+        }
+
+        // ══════════════════════════════════════
+        // 🗝️ 황금 열쇠 시스템
+        // ══════════════════════════════════════
+        let goldenKeys = 0;
+        let grantedKeyLevels = new Set(); // 이미 지급된 레벨
+        let activeKeyEffect = null; // 현재 활성 효과 { type, label, data }
+
+        // 레벨별 열쇠 지급 기준 [레벨, 지급 수]
+        const KEY_LEVEL_GRANTS = [
+            [50,1],[150,2],[250,3],[350,4],[450,5],[500,6]
+        ];
+
+        // 효과 정의
+        const KEY_EFFECTS = [
+            { type:'market_fix',    label:'시장 동결',       desc:'다음 라운드 모든 선박의 글로벌 노이즈가 0으로 고정됩니다.' },
+            { type:'manipulation',  label:'시세 조작',       desc:'원하는 선박 1척의 성공률을 +20 부스트합니다. 선박을 클릭해 선택하세요.' },
+            { type:'prophecy',      label:'예언서',          desc:'다음 라운드에 등장할 상황 4가지 중 1개를 직접 선택합니다. 상황 카드를 클릭해 선택하세요.' },
+            { type:'big_gain',      label:'뜻밖의 개이득',   desc:'자본 1,000 레알을 즉시 획득합니다.' },
+            { type:'small_gain',    label:'소확행',          desc:'자본 500 레알을 즉시 획득합니다.' },
+            { type:'immunity',      label:'부정 조사 면제',  desc:'다음 라운드 비윤리 선박 투자에 도덕지수 패널티가 없습니다.' },
+            { type:'insurance',     label:'보험',            desc:'다음 항해에서 투자한 선박 중 1척이 실패해도 투자금의 50%를 돌려받습니다.' },
+            { type:'disaster',      label:'대형 사고',       desc:'⚠️ 불운! 선박 1척이 강제로 항해 실패합니다.' },
+        ];
+
+        // 현재 레벨에서 다음 열쇠 지급 레벨 계산
+        function getNextKeyLevel(currentLevel) {
+            for (const [lv] of KEY_LEVEL_GRANTS) {
+                if (lv > currentLevel) return lv;
+            }
+            return null;
+        }
+
+        // 로컬 스토리지에서 부여된 레벨 로드
+        function loadGrantedKeyLevels() {
+            try {
+                const key = `aov_grantedKeys_${playerClass}_${playerNumber}_${playerName}`;
+                const saved = JSON.parse(localStorage.getItem(key) || '[]');
+                grantedKeyLevels = new Set(saved);
+            } catch(e) { grantedKeyLevels = new Set(); }
+        }
+        function saveGrantedKeyLevels() {
+            try {
+                const key = `aov_grantedKeys_${playerClass}_${playerNumber}_${playerName}`;
+                localStorage.setItem(key, JSON.stringify([...grantedKeyLevels]));
+            } catch(e) {}
+        }
+
+        // 레벨 업 시 열쇠 지급 체크 (게임 종료 후 호출)
+        function checkAndGrantKeys(currentLevel) {
+            loadGrantedKeyLevels();
+            let granted = 0;
+            for (const [lv, cnt] of KEY_LEVEL_GRANTS) {
+                if (currentLevel >= lv && !grantedKeyLevels.has(lv)) {
+                    grantedKeyLevels.add(lv);
+                    goldenKeys += cnt;
+                    granted += cnt;
+                }
+            }
+            if (granted > 0) {
+                saveGrantedKeyLevels();
+                saveGoldenKeys();
+                showCustomAlert(`🗝️ 황금 열쇠 ${granted}개를 획득했습니다! (총 ${goldenKeys}개)`);
+            }
+        }
+
+        function saveGoldenKeys() {
+            try {
+                const key = `aov_goldenKeys_${playerClass}_${playerNumber}_${playerName}`;
+                localStorage.setItem(key, goldenKeys);
+            } catch(e) {}
+        }
+        function loadGoldenKeys() {
+            try {
+                const key = `aov_goldenKeys_${playerClass}_${playerNumber}_${playerName}`;
+                goldenKeys = parseInt(localStorage.getItem(key) || '0');
+            } catch(e) { goldenKeys = 0; }
+        }
+
+        function updateGoldenKeyUI() {
+            const btn = document.getElementById('golden-key-btn');
+            const cnt = document.getElementById('golden-key-count');
+            if (!btn || !cnt) return;
+            cnt.textContent = '×' + goldenKeys;
+            if (goldenKeys > 0) {
+                btn.style.background = 'linear-gradient(135deg,rgba(200,150,12,0.3),rgba(245,158,11,0.15))';
+                btn.style.color = '#f59e0b';
+                btn.style.border = '1px solid rgba(200,150,12,0.6)';
+                cnt.style.background = 'rgba(200,150,12,0.35)';
+            } else {
+                btn.style.background = 'rgba(60,50,40,0.6)';
+                btn.style.color = '#6b7280';
+                btn.style.border = '1px solid rgba(100,80,60,0.4)';
+                cnt.style.background = 'rgba(100,80,60,0.4)';
+            }
+        }
+
+        function showKeyTooltip() {
+            const tip = document.getElementById('golden-key-tooltip');
+            if (!tip) return;
+            // 다음 열쇠 지급 레벨
+            const myTitlesKey = `aov_titles_${playerClass}_${playerNumber}_${playerName}`;
+            let titleList = [];
+            try { titleList = JSON.parse(localStorage.getItem(myTitlesKey)||'[]').map(t=>t.title||t); } catch(e){}
+            const lv = calcExpAndLevel(titleList).level;
+            const nextLv = getNextKeyLevel(lv);
+            const nextInfo = nextLv ? `다음 열쇠: <b style="color:#f59e0b">Lv.${nextLv}</b> 도달 시 지급` : `<b style="color:#f59e0b">최대 레벨 열쇠 모두 획득!</b>`;
+            const effectList = KEY_EFFECTS.map(e => `• <b>${e.label}</b>: ${e.desc}`).join('<br>');
+            tip.innerHTML = `<div style="margin-bottom:8px;font-weight:900;color:#c8960c;">🗝️ 황금 열쇠 (보유: ${goldenKeys}개)</div>`
+                + `<div style="margin-bottom:8px;font-size:10px;color:#9e7a4a;">${nextInfo}</div>`
+                + `<div style="font-size:10px;color:#c8960c;font-weight:700;margin-bottom:4px;">지급 기준</div>`
+                + KEY_LEVEL_GRANTS.map(([lv,cnt])=>`<span style="font-size:10px;color:#9e7a4a;">Lv.${lv} → ${cnt}개</span>`).join(' &nbsp;')
+                + `<div style="border-top:1px solid rgba(200,150,12,0.2);margin:8px 0;"></div>`
+                + `<div style="font-size:10px;color:#c8960c;font-weight:700;margin-bottom:4px;">효과 목록 (각 12.5%)</div>`
+                + `<div style="font-size:10px;color:#9e7a4a;line-height:1.7;">${effectList}</div>`;
+            tip.style.display = 'block';
+        }
+        function hideKeyTooltip() {
+            const tip = document.getElementById('golden-key-tooltip');
+            if (tip) tip.style.display = 'none';
+        }
+
+        function setActiveKeyEffect(effect) {
+            activeKeyEffect = effect;
+            const banner = document.getElementById('active-key-effect-banner');
+            const txt = document.getElementById('active-key-effect-text');
+            if (!banner || !txt) return;
+            if (effect) {
+                txt.textContent = `[${effect.label}] ${effect.desc}`;
+                banner.style.display = '';
+            } else {
+                banner.style.display = 'none';
+            }
+        }
+
+        function useGoldenKey() {
+            if (goldenKeys <= 0) {
+                showCustomAlert('🗝️ 보유한 황금 열쇠가 없습니다.');
+                return;
+            }
+            // 확인창
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.innerHTML = `
+            <div style="background:linear-gradient(145deg,#1c0e02,#2c1a04);border:2px solid rgba(200,150,12,0.5);border-radius:16px;width:100%;max-width:380px;padding:24px;text-align:center;">
+                <div style="font-size:32px;margin-bottom:8px;">🗝️</div>
+                <div style="font-weight:900;font-size:16px;color:#f59e0b;margin-bottom:6px;">황금 열쇠 사용</div>
+                <div style="font-size:12px;color:#9e7a4a;margin-bottom:20px;">랜덤 효과가 발동됩니다. 어떤 효과가 나올지 알 수 없습니다.<br><b style="color:#f59e0b">현재 보유: ${goldenKeys}개</b></div>
+                <div style="display:flex;gap:10px;justify-content:center;">
+                    <button onclick="confirmUseKey(this)" style="background:linear-gradient(135deg,#7a4a1a,#c8960c);color:#fff;border:none;border-radius:8px;padding:10px 24px;font-weight:900;font-size:13px;cursor:pointer;">사용하기</button>
+                    <button onclick="this.closest('[style*=fixed]').remove()" style="background:rgba(60,50,40,0.8);color:#9e7a4a;border:1px solid rgba(100,80,60,0.4);border-radius:8px;padding:10px 24px;font-weight:700;font-size:13px;cursor:pointer;">취소</button>
+                </div>
+            </div>`;
+            document.body.appendChild(modal);
+        }
+
+        function confirmUseKey(btn) {
+            btn.closest('[style*=fixed]').remove();
+            goldenKeys--;
+            saveGoldenKeys();
+            updateGoldenKeyUI();
+
+            // 랜덤 효과 결정 (각 12.5%)
+            const effect = KEY_EFFECTS[Math.floor(Math.random() * KEY_EFFECTS.length)];
+            playSound('golden_key');
+
+            // 즉시 효과
+            if (effect.type === 'big_gain') {
+                cash += 1000;
+                updateDashboard();
+                showCustomAlert(`🗝️ [${effect.label}] 1,000 레알 획득!`);
+            } else if (effect.type === 'small_gain') {
+                cash += 500;
+                updateDashboard();
+                showCustomAlert(`🗝️ [${effect.label}] 500 레알 획득!`);
+            } else if (effect.type === 'disaster') {
+                // 보유 선박 중 랜덤 1척 실패
+                const owned = Object.keys(portfolio).filter(id => portfolio[id] > 0 && !ships[id]._ruined);
+                if (owned.length > 0) {
+                    const vic = owned[Math.floor(Math.random() * owned.length)];
+                    ships[vic]._ruined = true;
+                    ships[vic].currentProb = 0;
+                    updateAllShipCards();
+                    showCustomAlert(`🗝️ [${effect.label}] ⚠️ ${ships[vic].name}이(가) 강제 항해 실패 상태가 되었습니다!`);
+                } else {
+                    showCustomAlert(`🗝️ [${effect.label}] 투자 중인 선박이 없어 효과가 발동되지 않았습니다.`);
+                }
+            } else if (effect.type === 'market_fix') {
+                setActiveKeyEffect({ ...effect, rounds: 1 });
+                showCustomAlert(`🗝️ [${effect.label}] 다음 라운드 글로벌 노이즈가 0으로 고정됩니다.`);
+            } else if (effect.type === 'immunity') {
+                setActiveKeyEffect({ ...effect });
+                showCustomAlert(`🗝️ [${effect.label}] 다음 라운드 비윤리 선박 도덕지수 패널티 면제!`);
+            } else if (effect.type === 'insurance') {
+                setActiveKeyEffect({ ...effect });
+                showCustomAlert(`🗝️ [${effect.label}] 다음 항해에서 1척 실패 시 50% 환급됩니다.`);
+            } else if (effect.type === 'manipulation') {
+                setActiveKeyEffect({ ...effect });
+                showCustomAlert(`🗝️ [${effect.label}] 선박 카드를 클릭해 성공률 +20 부스트 선박을 선택하세요.`);
+            } else if (effect.type === 'prophecy') {
+                setActiveKeyEffect({ ...effect });
+                showCustomAlert(`🗝️ [${effect.label}] 상황 카드를 클릭해 다음 라운드에 발동될 상황을 1개 선택하세요.`);
+            }
+        }
+
+        function applyManipulation(shipId, btn) {
+            btn.closest('[style*=fixed]').remove();
+            if (ships[shipId]) {
+                ships[shipId].currentProb = Math.min(98, ships[shipId].currentProb + 20);
+                updateAllShipCards();
+                showCustomAlert(`⚙️ ${ships[shipId].name} 성공률 +20 적용 완료!`);
+            }
+            setActiveKeyEffect(null);
+        }
+
+        // 예언서 - 상황 카드 클릭 시 선택 확인창
+        function selectProphecySituation(sitIndex) {
+            if (!activeKeyEffect || activeKeyEffect.type !== 'prophecy') return false;
+            const sit = situations[sitIndex];
+            if (!sit) return false;
+            const confirmEl = document.createElement('div');
+            confirmEl.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:16px;';
+            confirmEl.innerHTML = `<div style="background:linear-gradient(145deg,#1c0e02,#2c1a04);border:2px solid rgba(200,150,12,0.5);border-radius:16px;width:100%;max-width:360px;padding:24px;text-align:center;">
+                <div style="font-size:28px;margin-bottom:6px;">📜</div>
+                <div style="font-weight:900;font-size:14px;color:#f59e0b;margin-bottom:8px;">예언서 선택</div>
+                <div style="font-size:12px;color:#9e7a4a;margin-bottom:16px;">다음 라운드 정세로 <b style="color:#e8d5a3">${sit.title}</b>을(를) 강제 지정합니다.</div>
+                <div style="display:flex;gap:10px;justify-content:center;">
+                    <button onclick="applyProphecy(${sitIndex},this)" style="background:linear-gradient(135deg,#7a4a1a,#c8960c);color:#fff;border:none;border-radius:8px;padding:8px 20px;font-weight:900;font-size:12px;cursor:pointer;">선택</button>
+                    <button onclick="this.closest('[style*=fixed]').remove()" style="background:rgba(60,50,40,0.8);color:#9e7a4a;border:1px solid rgba(100,80,60,0.4);border-radius:8px;padding:8px 20px;font-weight:700;font-size:12px;cursor:pointer;">취소</button>
+                </div></div>`;
+            document.body.appendChild(confirmEl);
+            return true;
+        }
+        function applyProphecy(sitIndex, btn) {
+            btn.closest('[style*=fixed]').remove();
+            // 다음 라운드에 이 상황을 강제 지정
+            activeKeyEffect.forcedSitIndex = sitIndex;
+            showCustomAlert(`📜 ${situations[sitIndex].title} — 다음 라운드에 강제 발동 예약됨!`);
         }
 
         function quitGame() {
@@ -3514,85 +3900,121 @@
             }
         }
 
-        function showMyTitles() {
-            const cls = document.getElementById('input-player-class').value.trim();
-            const num = document.getElementById('input-player-number').value.trim();
+        async function showMyTitles() {
+            const cls  = document.getElementById('input-player-class').value.trim();
+            const num  = document.getElementById('input-player-number').value.trim() || '0';
             const name = document.getElementById('input-player-name').value.trim();
-            const pw = document.getElementById('input-player-pw').value.trim();
-            if (!cls || !num || !name) { alert("반, 번호, 이름을 먼저 입력하세요!"); return; }
-            if (!pw) { alert("비밀번호를 입력해야 칭호 컬렉션을 볼 수 있습니다!"); return; }
-            const pwKey = `aov_pw_${cls}_${num}_${name}`;
-            const storedPw = localStorage.getItem(pwKey);
-            if (storedPw && storedPw !== pw) { alert("비밀번호가 맞지 않습니다!"); return; }
+            const pw   = document.getElementById('input-player-pw').value.trim();
 
-            // 로컬 칭호 (오프라인 폴백용)
+            // 로그인 여부 판단 (반+이름+비번 모두 있어야 획득 칭호 표시)
+            const isLoggedIn = !!(cls && name && pw);
+            if (isLoggedIn) {
+                const pwKey = `aov_pw_${cls}_${num}_${name}`;
+                await migratePwIfNeeded(pwKey);
+                const storedPw = localStorage.getItem(pwKey);
+                const pwHash = await hashPw(pw);
+                if (storedPw && storedPw !== pwHash) { alert("비밀번호가 맞지 않습니다!"); return; }
+            }
+
             const localKey = `aov_titles_${cls}_${num}_${name}`;
             let localTitleSet = new Set();
-            try {
-                const stored = JSON.parse(localStorage.getItem(localKey) || '[]');
-                stored.forEach(function(t){ if(t.title) localTitleSet.add(t.title); });
-            } catch(e){}
+            if (isLoggedIn) {
+                try {
+                    const stored = JSON.parse(localStorage.getItem(localKey) || '[]');
+                    stored.forEach(function(t){ if(t.title) localTitleSet.add(t.title); });
+                } catch(e){}
+            }
 
-            // 모달 먼저 생성 (로딩 상태)
+            // 모달 생성 (로딩 상태 or 바로 빈 컬렉션)
             const existing = document.getElementById('title-collection-modal');
             if (existing) existing.remove();
             const modal = document.createElement('div');
             modal.id = 'title-collection-modal';
             modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;padding:16px;';
-            modal.innerHTML = '<div style="background:linear-gradient(145deg,#f5edd6,#ede0c0);border:2px solid rgba(139,90,43,0.5);border-radius:16px;width:100%;max-width:480px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;">'
-              + '<div style="font-size:20px;margin-bottom:8px;">⏳</div>'
-              + '<div style="font-size:13px;color:#7a5c2e;font-weight:700;">칭호를 불러오는 중...</div>'
-              + '</div>';
+            if (isLoggedIn) {
+                modal.innerHTML = '<div style="background:linear-gradient(145deg,#f5edd6,#ede0c0);border:2px solid rgba(139,90,43,0.5);border-radius:16px;width:100%;max-width:480px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;">'
+                  + '<div style="font-size:20px;margin-bottom:8px;">⏳</div>'
+                  + '<div style="font-size:13px;color:#7a5c2e;font-weight:700;">칭호를 불러오는 중...</div>'
+                  + '</div>';
+            }
             document.body.appendChild(modal);
             modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
 
+            // tooltip 커스텀 (브라우저 기본 title 대신 직접 구현)
+            let tooltipEl = null;
+            function showTooltip(e, text) {
+                if (!text) return;
+                if (!tooltipEl) {
+                    tooltipEl = document.createElement('div');
+                    tooltipEl.style.cssText = 'position:fixed;z-index:10001;background:rgba(28,14,2,0.97);color:#e8d5a3;border:1px solid rgba(200,150,12,0.5);border-radius:8px;padding:7px 11px;font-size:11px;max-width:260px;line-height:1.5;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,0.6);';
+                    document.body.appendChild(tooltipEl);
+                }
+                tooltipEl.textContent = text;
+                tooltipEl.style.display = 'block';
+                moveTooltip(e);
+            }
+            function moveTooltip(e) {
+                if (!tooltipEl) return;
+                let x = e.clientX + 14, y = e.clientY + 14;
+                if (x + 270 > window.innerWidth) x = e.clientX - 275;
+                if (y + 80  > window.innerHeight) y = e.clientY - 70;
+                tooltipEl.style.left = x + 'px';
+                tooltipEl.style.top  = y + 'px';
+            }
+            function hideTooltip() { if (tooltipEl) tooltipEl.style.display = 'none'; }
+            modal.addEventListener('mousemove', function(e) {
+                const row = e.target.closest('[data-hint]');
+                if (row) { showTooltip(e, row.dataset.hint); moveTooltip(e); }
+                else hideTooltip();
+            });
+            modal.addEventListener('mouseleave', hideTooltip);
+
             function renderModal(myTitleSet) {
-                // 로컬 저장된 칭호별 desc 맵 구성
-                const titleDescMap = {};
-                try {
-                    const stored = JSON.parse(localStorage.getItem(localKey) || '[]');
-                    stored.forEach(function(t){ if(t.title && t.desc) titleDescMap[t.title] = t.desc; });
-                } catch(e){}
                 const lv = calcExpAndLevel(Array.from(myTitleSet));
                 let rows = '';
                 ALL_TITLES_LIST.forEach(function(entry) {
                     const rl = getTitleRarityLabel(entry.rarity);
                     const owned = myTitleSet.has(entry.title);
                     const hintText = entry.hint ? ('📋 획득 조건: ' + entry.hint) : '';
-                    rows += '<div title="' + hintText.replace(/"/g,'&quot;') + '" style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;margin-bottom:3px;background:' + (owned ? 'rgba(200,150,12,0.12)' : 'rgba(0,0,0,0.15)') + ';opacity:' + (owned ? '1' : '0.38') + ';cursor:help;">'
+                    rows += '<div data-hint="' + hintText.replace(/"/g, '&quot;') + '" style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;margin-bottom:3px;background:' + (owned ? 'rgba(200,150,12,0.12)' : 'rgba(0,0,0,0.15)') + ';opacity:' + (owned ? '1' : '0.38') + ';cursor:help;">'
                       + '<span style="min-width:32px;font-size:9px;font-weight:900;color:'+rl.color+';background:'+rl.color+'22;border:1px solid '+rl.color+'44;border-radius:3px;padding:1px 4px;text-align:center;">['+rl.label+']</span>'
                       + '<span style="font-size:11px;color:' + (owned ? '#2c1a04' : '#9e7a4a') + ';font-weight:' + (owned ? '700' : '400') + ';margin-left:6px;">'
                       + (owned ? '✅ ' : '🔒 ') + entry.title + '</span>'
                       + '</div>';
                 });
+                const notice = !isLoggedIn
+                    ? '<div style="font-size:11px;color:#b45309;background:rgba(200,150,12,0.12);border:1px solid rgba(200,150,12,0.3);border-radius:8px;padding:8px 12px;margin-bottom:8px;text-align:center;">반, 이름, 비밀번호를 입력하면 획득한 칭호가 표시됩니다.</div>'
+                    : '';
                 modal.innerHTML = '<div style="background:linear-gradient(145deg,#f5edd6,#ede0c0);border:2px solid rgba(139,90,43,0.5);border-radius:16px;width:100%;max-width:480px;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;">'
                   + '<div style="padding:14px 16px 10px;border-bottom:1px solid rgba(139,90,43,0.25);display:flex;align-items:center;justify-content:space-between;">'
                   + '<div>'
-                  + '<div style="font-weight:900;font-size:14px;color:#3d1a00;">📖 ' + name + '의 칭호 컬렉션</div>'
+                  + '<div style="font-weight:900;font-size:14px;color:#3d1a00;">📖 ' + (name || '나') + '의 칭호 컬렉션</div>'
                   + '<div style="font-size:11px;color:#7a5c2e;margin-top:2px;">'
                   + myTitleSet.size + ' / ' + ALL_TITLES_LIST.length + '개 획득 &nbsp;·&nbsp; Lv.' + lv.level + ' &nbsp;·&nbsp; ' + lv.exp + ' exp</div>'
                   + '</div>'
                   + '<button onclick="document.getElementById(&quot;title-collection-modal&quot;).remove()" style="font-size:18px;color:#7a5c2e;background:none;border:none;cursor:pointer;padding:0 4px;">✕</button>'
                   + '</div>'
-                  + '<div style="overflow-y:auto;padding:10px 12px;">' + rows + '</div>'
+                  + '<div style="overflow-y:auto;padding:10px 12px;">' + notice + rows + '</div>'
                   + '</div>';
+                // 모달 교체 후 tooltip 이벤트 재바인딩
+                modal.addEventListener('mousemove', function(e) {
+                    const row = e.target.closest('[data-hint]');
+                    if (row) { showTooltip(e, row.dataset.hint); moveTooltip(e); }
+                    else hideTooltip();
+                });
             }
 
-            // 스프레드시트에서 이 학생의 칭호 조회
-            if (SHEET_WEBHOOK_URL) {
+            if (isLoggedIn && SHEET_WEBHOOK_URL) {
                 fetch(`${SHEET_WEBHOOK_URL}?action=mytitles&cls=${encodeURIComponent(cls)}&num=${encodeURIComponent(num)}&name=${encodeURIComponent(name)}`)
                     .then(function(r){ return r.json(); })
                     .then(function(data) {
-                        const sheetTitleSet = new Set(localTitleSet); // 로컬 기반
+                        const sheetTitleSet = new Set(localTitleSet);
                         if (Array.isArray(data.titles)) {
                             data.titles.forEach(function(t){ if(t) sheetTitleSet.add(t); });
                         }
                         renderModal(sheetTitleSet);
                     })
-                    .catch(function() {
-                        // 스프레드시트 실패 시 로컬로 폴백
-                        renderModal(localTitleSet);
-                    });
+                    .catch(function() { renderModal(localTitleSet); });
             } else {
                 renderModal(localTitleSet);
             }
