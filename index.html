@@ -2003,9 +2003,8 @@
                 // 정세 변화 적용 전 스냅샷 (영향 전후 비교로 쉬운 설명 자동 생성)
                 const beforeSnapshot = JSON.parse(JSON.stringify(ships));
 
-                // 정세 변화 적용 (변동폭 2배: 한 번 더 impact 적용)
+                // 정세 변화 적용
                 sit.impact(ships);
-                sit.impact(ships); // 2배 임팩트로 도파민 강화
 
                 // 정세 변화 발생 시 메인 외 다른 7척 포함 모든 선박의 가치 동반 자동 변동
                 applyGlobalMarketFluctuations(sit.mainShip);
@@ -2078,8 +2077,8 @@
                 if (shipId === excludeShipId) continue;
                 if (ships[shipId]._ruined) continue;
                 
-                // 확률 변동: -10 ~ +8 (소폭 완화)
-                const probDelta = Math.floor(Math.random() * 19) - 10;
+                // 확률 변동: -8 ~ +8
+                const probDelta = Math.floor(Math.random() * 17) - 8;
                 ships[shipId].currentProb = Math.max(0, Math.min(98, ships[shipId].currentProb + probDelta));
 
                 if (ships[shipId].currentProb <= 0) {
