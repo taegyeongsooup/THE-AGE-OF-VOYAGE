@@ -949,7 +949,7 @@
         // 8 Ships Initial Configurations (Includes Captain and Cargo Img links placeholder)
         const baseShips = {
             A: { id: "A", name: "산타 마리아 호", captain: "디아스 선장", cargo: "후추", destination: "인도 코친", baseProb: 70, currentProb: 70, baseMult: 1.5, currentMult: 1.5, isUnethical: false, icon: "fa-seedling", bg: "from-emerald-950/50 to-emerald-900/10", border: "border-emerald-800/60", badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", history: [50], captainImg: "captain_A.jpg", goodsImg: "goods_A.jpg", flagImg: "flag_A.png", routeImg: "route_A.jpg" },
-            B: { id: "B", name: "골든 하인드 호", captain: "드레이크 선장", cargo: "정향", destination: "몰루카 제도", baseProb: 40, currentProb: 40, baseMult: 3.0, currentMult: 3.0, isUnethical: false, icon: "fa-leaf", bg: "from-blue-950/50 to-blue-900/10", border: "border-blue-800/60", badgeColor: "bg-blue-500/10 text-blue-400 border-blue-500/20", history: [50], captainImg: "captain_B.jpg", goodsImg: "goods_B.jpg", flagImg: "flag_B.png", routeImg: "route_B.jpg" },
+            B: { id: "B", name: "골든 하인드 호(해적 선단)", captain: "드레이크 선장", cargo: "정향", destination: "몰루카 제도", baseProb: 40, currentProb: 40, baseMult: 3.0, currentMult: 3.0, isUnethical: false, icon: "fa-leaf", bg: "from-blue-950/50 to-blue-900/10", border: "border-blue-800/60", badgeColor: "bg-blue-500/10 text-blue-400 border-blue-500/20", history: [50], captainImg: "captain_B.jpg", goodsImg: "goods_B.jpg", flagImg: "flag_B.png", routeImg: "route_B.jpg" },
             C: { id: "C", name: "엘카노의 전함", captain: "엘카노 선장", cargo: "은괴", destination: "페루 포토시", baseProb: 60, currentProb: 60, baseMult: 2.0, currentMult: 2.0, isUnethical: false, icon: "fa-coins", bg: "from-cyan-950/50 to-cyan-900/10", border: "border-cyan-800/60", badgeColor: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", history: [50], captainImg: "captain_C.jpg", goodsImg: "goods_C.jpg", flagImg: "flag_C.png", routeImg: "route_C.jpg" },
             D: { id: "D", name: "산 프란시스코 호", captain: "고메스 선장", cargo: "감자", destination: "신대륙 연안", baseProb: 80, currentProb: 80, baseMult: 1.2, currentMult: 1.2, isUnethical: false, icon: "fa-wheat-awn", bg: "from-amber-950/50 to-amber-900/10", border: "border-amber-800/60", badgeColor: "bg-amber-500/10 text-amber-400 border-amber-500/20", history: [50], captainImg: "captain_D.jpg", goodsImg: "goods_D.jpg", flagImg: "flag_D.png", routeImg: "route_D.jpg" },
             E: { id: "E", name: "블랙 에보니 호", captain: "호킨스 선장", cargo: "노예", destination: "카리브해 농장", baseProb: 50, currentProb: 50, baseMult: 4.5, currentMult: 4.5, isUnethical: true, icon: "fa-link", bg: "from-rose-950/50 to-rose-900/10", border: "border-rose-800/60", badgeColor: "bg-rose-500/10 text-rose-400 border-rose-500/20", history: [50], captainImg: "captain_E.jpg", goodsImg: "goods_E.jpg", flagImg: "flag_E.png", routeImg: "route_E.jpg" },
@@ -1123,42 +1123,42 @@
             },
             {
                 title: "포르투갈-스페인 영토 분쟁 타결 (토르데시야스 조약)",
-                desc: "양국 교황 주재하에 영해 선긋기 협정이 명확히 이루어지며 합의 세력 하의 서쪽 카리브해 개척이 평화 기조를 탑니다.",
+                desc: "교황의 중재로 포르투갈과 스페인이 영해를 확정하며, 대서양에서의 안전이 보장됩니다.",
                 impact: (s) => {
                     s.G.currentProb += 15; s.C.currentProb += 10;
                 }
             },
             {
-                title: "식량 무역 독점 기획 및 조합 설립",
-                desc: "주요 왕가에서 신대륙 감자와 옥수수 대규모 조달을 위한 '식량 수급 카르텔'을 형성해 고정 수매가를 보장하기 시작합니다.",
+                title: "왕가의 감자 카르텔 형성",
+                desc: "유럽의 주요 왕가에서 신대륙 감자의 대규모 조달을 위한 '식량 수급 카르텔'을 형성하고 고정 가격을 보장하기 시작합니다.",
                 impact: (s) => {
                     s.D.currentMult += 0.3;
                 }
             },
             {
                 title: "마젤란 선단의 선장 사망설 및 혼란",
-                desc: "필리핀 근해 전투에서 총사령관 마젤란 선장이 전사했다는 어두운 소식이 동방 연락선으로부터 긴급 당도합니다.",
+                desc: "필리핀 근해 전투에서 총사령관 마젤란 선장이 전사했다는 불길한 소식이 동방 연락선으로부터 긴급하게 전해집니다.",
                 impact: (s) => {
                     s.F.currentProb -= 20;
                 }
             },
             {
                 title: "유럽 대공항 전조 증상 및 현금 사재기",
-                desc: "금속 화폐 가치의 불신과 경제 둔화로 인해 고가 사치품인 도자기와 향신료 소비가 일시 위축되고 안전 지중해 상품이 보장받습니다.",
+                desc: "금속 화폐 가치의 불신과 경제 둔화로 인해 고가 사치품인 비단과 후추 소비가 일시 위축되고 안전한 지중해 상품의 가격이 높아집니다.",
                 impact: (s) => {
                     s.F.currentMult -= 0.5; s.A.currentMult -= 0.2; s.H.currentProb += 10;
                 }
             },
             {
                 title: "몰루카 향료 독점 전쟁 발발",
-                desc: "정향을 독점하려는 포르투갈과 네덜란드 군함들이 산발적인 포격전을 벌이며 현지 무역 거점이 극도의 화염에 휩싸입니다.",
+                desc: "정향을 독점하려는 포르투갈과 네덜란드 군함들이 산발적인 포격전을 벌이며 동남아시아의 무역 거점이 화염에 휩싸입니다.",
                 impact: (s) => {
                     s.B.currentProb -= 15; s.B.currentMult += 0.8;
                 }
             },
             {
                 title: "신대륙 은 수송선 해상 기습 나포 성공",
-                desc: "해적선단이 은을 한가득 싣고 귀환하던 에스파냐 수송선을 통째로 사로잡았다는 영웅 무용담이 펍에서 들려옵니다.",
+                desc: "해적선단이 은을 한가득 싣고 귀환하던 에스파냐 수송선을 통째로 사로잡았다는 영웅담이 전해집니다.",
                 impact: (s) => {
                     s.B.currentMult += 1.0; s.C.currentProb -= 10;
                 }
@@ -1172,7 +1172,7 @@
             },
             {
                 title: "지중해 연안 물가 폭등 및 직물 가치 갱신",
-                desc: "신항로들이 불침번을 서는 사이 지중해 도시 인구밀도가 부활하며, 전통적인 이탈리아 고급 모직 직물의 수요가 폭등합니다.",
+                desc: "지중해 도시 인구 밀도가 이전 수준을 회복하며 전통적인 이탈리아 고급 모직 직물의 수요가 폭등합니다.",
                 impact: (s) => {
                     s.H.currentMult += 0.4; s.H.currentProb += 10;
                 }
