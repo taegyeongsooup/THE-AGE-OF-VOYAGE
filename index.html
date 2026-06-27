@@ -44,22 +44,16 @@
         .header-title {
             font-family: 'Cinzel', 'Noto Sans KR', serif;
         }
-        /* 투자 중인 선박 카드 - 황금색 발광 */
+        /* 투자 중인 선박 카드 - 테두리 황금 발광만 (배경은 인라인으로 처리) */
         @keyframes owned-glow {
-            0%, 100% { box-shadow: 0 0 8px 2px rgba(234,179,8,0.70), inset 0 0 14px rgba(234,179,8,0.18); }
-            50%       { box-shadow: 0 0 26px 8px rgba(234,179,8,1.0), inset 0 0 26px rgba(234,179,8,0.32); }
+            0%, 100% { box-shadow: 0 0 5px 1px rgba(234,179,8,0.65); }
+            50%       { box-shadow: 0 0 12px 3px rgba(234,179,8,0.90); }
         }
         .ship-card.is-owned {
-            border-color: rgba(234,179,8,0.95) !important;
+            border-color: rgba(234,179,8,0.92) !important;
             border-width: 2px !important;
             animation: owned-glow 2.0s ease-in-out infinite;
-            background: linear-gradient(145deg, #fefce8, #fef08a, #fde047) !important;
         }
-        .ship-card.is-owned .bg-slate-950\/40 { background: rgba(113,85,0,0.12) !important; }
-        .ship-card.is-owned .bg-slate-950\/60 { background: rgba(113,85,0,0.10) !important; }
-        .ship-card.is-owned h4              { color: #713f12 !important; }
-        .ship-card.is-owned .text-slate-500,
-        .ship-card.is-owned .text-slate-400 { color: #92400e !important; }
 
         /* 침몰 임박 선박 (성공률 10% 이하) 빨간 깜빡임 */
         @keyframes danger-pulse {
@@ -152,6 +146,15 @@
         .ship-card {
             background: linear-gradient(145deg, #f5edd6, #ede0c0) !important;
             color: #1a0f00 !important;
+        }
+        /* 투자 중인 카드 - 단색 황금 배경 */
+        .ship-card.is-owned {
+            background: #fbbf24 !important;
+        }
+        /* 내부 반투명 영역들은 흰색으로 덮어서 가독성 확보 */
+        .ship-card.is-owned .bg-slate-950\/40,
+        .ship-card.is-owned .bg-slate-950\/60 {
+            background: rgba(255,255,255,0.55) !important;
         }
         .ship-card .text-slate-100, .ship-card .text-slate-200,
         .ship-card .text-slate-300 { color: #2c1a04 !important; }
@@ -704,7 +707,7 @@
             </div>
             
             <h2 class="header-title text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text mb-2 tracking-tight" style="background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                대항해 시대: 운명을 건 항해(2.8v)
+                대항해 시대: 운명을 건 항해(2.6v)
             </h2>
             <p class="text-slate-300 max-w-2xl text-sm sm:text-base mb-3 leading-relaxed px-4">
                 16세기, 유럽의 야심 찬 선장들이 미지의 신대륙과 인도를 향해 닻을 올립니다.<br>
@@ -1056,7 +1059,7 @@
         // 아래 URL을 본인의 Google Apps Script 웹앱 배포 URL로 교체하세요.
         // (Google Sheets > 확장 프로그램 > Apps Script 에서 webhook 코드를 배포한 뒤 "웹앱 URL"을 붙여넣으면
         //  게임 결과 제출 시 자동으로 칭호 기록이 시트에 누적되고, 로비 화면의 명예의 전당 TOP10도 이 URL에서 데이터를 읽어옵니다.)
-        const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxAGq1N9ak_RV4mY0iOcYYF3yMAdJ8KvG5g7vZLu5QzGkMQQF48NmsV7MzH_bbQVmz2/exec"
+        const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzR_PZUn2ln8XO56jQVJ9VL6eX3TxG01M9QqhBAbFLkYPyY-cijvWl9b1tqgCxabz45/exec"
 
         // ----------------------------------------------------
         // PLAYER IDENTITY (반 / 번호 / 이름)
@@ -2544,7 +2547,7 @@
                     pnlText = `${pnlIcon} ${pnlAmount >= 0 ? '+' : ''}${Math.round(pnlAmount).toLocaleString()} (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(1)}%)`;
                 }
 
-                let riskText = "안정선";
+                let riskText = "안전";
                 let riskColor = "text-emerald-400";
                 if (s.currentProb < 40) {
                     riskText = "초고위험";
@@ -2573,7 +2576,7 @@
                 const trendGraphHTML = createTrendGraph(s.history);
 
                 const cardHTML = `
-                    <div class="ship-card relative rounded-xl border ${s.border} ${isOwned ? 'is-owned' : ''} ${(!s._ruined && s.currentProb <= 10 && s.currentProb > 0) ? 'is-danger' : ''} bg-gradient-to-br ${s.bg} p-2 lg:p-2.5 flex flex-col justify-between overflow-hidden shadow-md" style="min-height:280px;">
+                    <div class="ship-card relative rounded-xl border ${s.border} ${isOwned ? 'is-owned' : ''} ${(!s._ruined && s.currentProb <= 10 && s.currentProb > 0) ? 'is-danger' : ''} ${isOwned ? '' : `bg-gradient-to-br ${s.bg}`} p-2 lg:p-2.5 flex flex-col justify-between overflow-hidden shadow-md" style="min-height:280px;${isOwned ? 'background:#fde047;' : ''}">
                         ${unethicalOverlay}
                         ${ruinedOverlay}
                         <div class="flex flex-col min-h-0">
@@ -2595,7 +2598,7 @@
                             </div>
 
                             <!-- Captain & Goods Circular Avatars -->
-                            <div class="flex gap-2 justify-center bg-slate-950/40 py-1 px-2 rounded-lg items-center mb-1.5 shrink-0">
+                            <div class="flex gap-2 justify-center bg-slate-950/40 py-1 px-2 rounded-lg items-center mb-1.5 shrink-0" style="${isOwned ? 'background:rgba(255,255,255,0.50) !important;' : ''}">
                                 <div class="flex items-center gap-1.5 flex-1 justify-center border-r border-slate-800/80">
                                     <div class="w-7 h-7 rounded-full border border-slate-700 bg-slate-900 overflow-hidden flex-shrink-0 flex items-center justify-center">
                                         <img data-role="captain-photo" data-ship="${shipId}" src="${s.captainImg || ''}" alt="선장 사진" class="w-full h-full object-cover" style="${s.captainImg ? '' : 'display:none;'}" onerror="this.style.display='none';" loading="lazy">
@@ -2643,7 +2646,7 @@
                             </div>
 
                             <!-- SVG Area Trend Sparkline -->
-                            <div class="bg-slate-950/60 border border-slate-900/80 rounded-lg p-1 mb-1 shrink-0">
+                            <div class="bg-slate-950/60 border border-slate-900/80 rounded-lg p-1 mb-1 shrink-0" style="${isOwned ? 'background:rgba(255,255,255,0.50) !important;' : ''}">
                                 <div class="w-full flex justify-center">
                                     ${trendGraphHTML}
                                 </div>
@@ -2663,17 +2666,17 @@
 
                         <!-- Trade Controls -->
                         <div class="shrink-0 mt-auto">
-                            <div class="flex justify-between items-center text-[11px] mb-1 bg-slate-950/40 px-2 py-0.5 rounded">
+                            <div class="flex justify-between items-center text-[11px] mb-1 bg-slate-950/40 px-2 py-0.5 rounded" style="${isOwned ? 'background:rgba(255,255,255,0.50) !important;' : ''}">
                                 <span class="text-slate-500">보유: <strong class="text-blue-300 font-mono">${portfolio[shipId]} 주</strong></span>
                                 <span class="text-slate-500">평단가: <strong class="text-slate-300 font-mono">${Math.round(myAvgCost)}</strong></span>
                             </div>
-                            <div class="flex justify-between items-center text-[12px] mb-1.5 bg-slate-950/40 px-2 py-0.5 rounded">
+                            <div class="flex justify-between items-center text-[12px] mb-1.5 bg-slate-950/40 px-2 py-0.5 rounded" style="${isOwned ? 'background:rgba(255,255,255,0.50) !important;' : ''}">
                                 <span class="text-slate-500">평가액: <strong class="text-slate-200 font-mono">${Math.round(holdingVal).toLocaleString()}</strong></span>
                                 <span class="font-mono font-bold ${pnlClass}">${pnlText}</span>
                             </div>
 
                             <!-- 수량 입력 + 매수/매도 -->
-                            <div class="flex items-center gap-1 mb-1 text-[11px]">
+                            <div class="flex items-center gap-1 mb-1 text-[11px]" style="${isOwned ? 'background:rgba(255,255,255,0.45);border-radius:6px;padding:2px 4px;' : ''}">
                                 <span class="text-slate-500 flex-shrink-0" style="color:#7a5c2e;">수량</span>
                                 <input type="number" id="qty-${shipId}" min="1" value="1"
                                     style="width:52px;background:rgba(255,255,255,0.6);border:1px solid rgba(139,90,43,0.4);border-radius:6px;padding:2px 4px;text-align:center;font-weight:700;color:#1a0f00;font-size:11px;"
@@ -2698,7 +2701,7 @@
                                 <button onclick="buyShares('${shipId}', parseInt(document.getElementById('qty-${shipId}').value)||1)" style="background:linear-gradient(135deg,#7a4a1a,#a06820);color:#f5edd6;border:1px solid rgba(200,150,12,0.4);" class="flex-1 py-1.5 rounded-lg font-bold transition duration-150 flex items-center justify-center gap-0.5 active:scale-95 hover:brightness-110">
                                     <i class="fa-solid fa-plus text-[9px]"></i> 매수
                                 </button>
-                                <button onclick="sellShares('${shipId}', parseInt(document.getElementById('qty-${shipId}').value)||1)" style="${!isOwned ? 'opacity:0.4;pointer-events:none;' : ''}background:rgba(44,26,4,0.25);color:#5c3d11;border:1px solid rgba(92,61,17,0.35);" class="flex-1 py-1.5 rounded-lg font-bold transition duration-150 flex items-center justify-center gap-0.5 active:scale-95 hover:brightness-110" ${!isOwned ? 'disabled' : ''}>
+                                <button onclick="sellShares('${shipId}', parseInt(document.getElementById('qty-${shipId}').value)||1)" style="${!isOwned ? 'opacity:0.4;pointer-events:none;' : ''}background:${isOwned ? '#c9a96e' : 'rgba(44,26,4,0.25)'};color:#3d1a00;border:1px solid rgba(92,61,17,0.35);" class="flex-1 py-1.5 rounded-lg font-bold transition duration-150 flex items-center justify-center gap-0.5 active:scale-95 hover:brightness-110" ${!isOwned ? 'disabled' : ''}>
                                     <i class="fa-solid fa-minus text-[9px]"></i> 매도
                                 </button>
                                 <button onclick="sellAllOfShip('${shipId}')" style="${!isOwned ? 'opacity:0.4;pointer-events:none;' : ''}background:#991b1b;color:#fff;border:1px solid #7f1d1d;" class="px-1.5 py-1.5 rounded-lg text-[10px] font-bold transition duration-150 active:scale-95 hover:brightness-110" title="전액매도" ${!isOwned ? 'disabled' : ''}>
@@ -3519,12 +3522,13 @@
 
             const studentMap = {};
             records.forEach(r => {
-                // playerClass/playerName 중 하나라도 없으면 스킵
-                if (!r.playerName && !r.name) return;
-                const cls  = r.playerClass || r.cls  || '?';
-                const num  = r.playerNumber || r.num  || '0';
-                const name = r.playerName   || r.name || '?';
-                const key  = `${cls}-${num}-${name}`;
+                // 이름 없으면 스킵
+                const name = (r.playerName || r.name || '').trim();
+                if (!name) return;
+                const cls  = (r.playerClass || r.cls || '?').trim();
+                const num  = (r.playerNumber || r.num || '').trim();
+                // key: 번호 있으면 cls-num-name, 없으면 cls-name (같은 사람 중복 방지)
+                const key  = num ? `${cls}-${num}-${name}` : `${cls}-${name}`;
 
                 if (!studentMap[key]) {
                     studentMap[key] = {
@@ -3538,18 +3542,20 @@
                 studentMap[key].playCount += 1;
                 studentMap[key].totalAssetsSum += assets;
 
-                // 칭호 파싱 — 배열/단일문자열/슬래시구분 모두 대응
+                // 칭호 파싱 — 배열/단일문자열/슬래시구분/title1~N 전부 대응
                 let titles = [];
                 if (Array.isArray(r.titles)) {
-                    titles = r.titles;
+                    titles = r.titles.filter(Boolean);
                 } else if (typeof r.titles === 'string' && r.titles.trim()) {
-                    titles = r.titles.split(/[,\/]/).map(t => t.trim()).filter(Boolean);
-                } else if (r.title) {
-                    titles = [r.title];
+                    titles = r.titles.split(/[,\/；\|]/).map(t => t.trim()).filter(Boolean);
                 }
-                // 스프레드시트 가로 열로 저장된 칭호 (title1, title2 ...) 대응
-                for (let i = 1; i <= 20; i++) {
-                    const tk = r[`title${i}`] || r[`titles${i}`];
+                // 단일 title 필드
+                if (r.title && typeof r.title === 'string' && r.title.trim()) {
+                    titles.push(r.title.trim());
+                }
+                // 스프레드시트 가로 열 칭호 (title1, title2 ... 또는 titles1, titles2 ...)
+                for (let i = 1; i <= 30; i++) {
+                    const tk = (r[`title${i}`] || r[`titles${i}`] || '');
                     if (tk && typeof tk === 'string' && tk.trim()) titles.push(tk.trim());
                 }
 
