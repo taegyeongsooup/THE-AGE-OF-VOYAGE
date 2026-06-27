@@ -44,7 +44,7 @@
         .header-title {
             font-family: 'Cinzel', 'Noto Sans KR', serif;
         }
-        /* 투자 중인(보유 중인) 선박 카드 - 테두리 발광 효과 */
+        /* 투자 중인(보유 중인) 선박 카드 - 테두리 발광 효과 + 배경 강조 */
         @keyframes owned-glow {
             0%, 100% { box-shadow: 0 0 6px 1px rgba(200, 150, 12, 0.55), inset 0 0 12px rgba(200, 150, 12, 0.08); }
             50% { box-shadow: 0 0 18px 5px rgba(200, 150, 12, 0.90), inset 0 0 20px rgba(200, 150, 12, 0.16); }
@@ -52,6 +52,14 @@
         .ship-card.is-owned {
             border-color: rgba(200, 150, 12, 0.90) !important;
             animation: owned-glow 2.2s ease-in-out infinite;
+            background: linear-gradient(145deg, #fffae8, #f7ecc5) !important;
+        }
+        /* 투자 중인 카드 내부 구분선 색 강조 */
+        .ship-card.is-owned .bg-slate-950\/40 {
+            background: rgba(200,150,12,0.12) !important;
+        }
+        .ship-card.is-owned .bg-slate-950\/60 {
+            background: rgba(200,150,12,0.10) !important;
         }
         /* 손익 컬러 규칙: 이득(빨강) / 손해(파랑) - 사용자 요청 반영 */
         .pnl-profit { color: #f87171 !important; }
@@ -593,28 +601,29 @@
     </script>
 
     <!-- App Header -->
-    <header id="main-header" class="border-b border-slate-800/80 backdrop-blur-md px-6 py-3 h-[65px] flex items-center shrink-0 z-30" style="background: linear-gradient(135deg, rgba(28,14,2,0.97), rgba(44,26,4,0.95)); display:none;">
-        <div class="max-w-7xl w-full mx-auto flex justify-between items-center gap-4">
-            <div class="flex items-center gap-2.5">
-                <div class="p-2 rounded-xl shadow-lg text-amber-200" style="background: linear-gradient(135deg, #8b4513, #c8960c); box-shadow: 0 4px 12px rgba(200,150,12,0.25);">
-                    <i class="fa-solid fa-ship text-lg animate-pulse"></i>
+    <header id="main-header" class="border-b border-slate-800/80 backdrop-blur-md px-4 py-2 h-[65px] flex items-center shrink-0 z-30" style="background: linear-gradient(135deg, rgba(28,14,2,0.97), rgba(44,26,4,0.95)); display:none;">
+        <div class="w-full flex items-center gap-3">
+            <!-- 타이틀 (왼쪽 고정) -->
+            <div class="flex items-center gap-2 shrink-0">
+                <div class="p-1.5 rounded-xl shadow-lg text-amber-200" style="background: linear-gradient(135deg, #8b4513, #c8960c); box-shadow: 0 4px 12px rgba(200,150,12,0.25);">
+                    <i class="fa-solid fa-ship text-base animate-pulse"></i>
                 </div>
                 <div>
-                    <h1 class="header-title text-lg font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400">
+                    <h1 class="header-title text-sm font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400">
                         THE AGE OF VOYAGE
                     </h1>
-                    <p class="text-[10px] uppercase tracking-widest font-semibold" style="color:#9e7a4a;">신항로 개척, 운명을 건 항해에 투자하라!</p>
+                    <p class="text-[9px] uppercase tracking-widest font-semibold hidden sm:block" style="color:#9e7a4a;">신항로 개척, 운명을 건 항해에 투자하라!</p>
                 </div>
             </div>
 
-            <!-- 활성 황금 열쇠 효과 표시 -->
-            <div id="active-key-effect-banner" style="display:none;flex:1;max-width:320px;background:linear-gradient(135deg,rgba(200,150,12,0.18),rgba(245,158,11,0.08));border:1px solid rgba(200,150,12,0.45);border-radius:10px;padding:5px 12px;font-size:11px;color:#f59e0b;font-weight:700;line-height:1.4;">
-                <span style="font-size:10px;opacity:0.7;display:block;">🗝️ 활성 효과</span>
-                <span id="active-key-effect-text"></span>
+            <!-- 활성 황금 열쇠 효과 표시 (타이틀이 왼쪽에, 효과 텍스트가 오른쪽에) -->
+            <div id="active-key-effect-banner" style="display:none;flex:1;max-width:420px;background:linear-gradient(135deg,rgba(200,150,12,0.18),rgba(245,158,11,0.08));border:1px solid rgba(200,150,12,0.45);border-radius:10px;padding:4px 12px;font-size:11px;color:#f59e0b;font-weight:700;line-height:1.4;flex-direction:row;align-items:center;gap:8px;">
+                <span style="font-size:10px;color:#c8960c;font-weight:900;white-space:nowrap;">🗝️ 활성 효과</span>
+                <span id="active-key-effect-text" style="flex:1;font-size:11px;"></span>
             </div>
             
-            <!-- Dashboard Stats -->
-            <div class="flex items-center gap-3 text-xs sm:text-sm">
+            <!-- Dashboard Stats (오른쪽) -->
+            <div class="flex items-center gap-2 ml-auto text-xs sm:text-sm flex-wrap justify-end">
                 <div class="rounded-lg px-3 py-1 flex items-center gap-1.5" style="background:rgba(28,12,2,0.85);border:1px solid rgba(139,90,43,0.5);">
                     <span class="text-slate-400 font-medium">현재 자산:</span>
                     <span class="text-emerald-400 font-bold" id="dashboard-total-assets">1,000</span>
@@ -646,7 +655,10 @@
                         <div style="font-size:11px;font-weight:900;color:#c8960c;margin-bottom:10px;letter-spacing:0.05em;">🔊 음량 설정</div>
                         <div style="margin-bottom:10px;">
                             <div style="font-size:10px;color:#9e7a4a;margin-bottom:4px;">🎵 배경음</div>
-                            <input type="range" id="bgm-slider" min="0" max="100" value="40" oninput="setBGMVolume(this.value/100);document.getElementById('bgm-val').textContent=this.value+'%'" style="width:100%;accent-color:#c8960c;cursor:pointer;">
+                            <input type="range" id="bgm-slider" min="0" max="100" value="40" 
+                                oninput="setBGMVolume(this.value/100);document.getElementById('bgm-val').textContent=this.value+'%'"
+                                ontouchstart="unlockAudio()" ontouchmove="setBGMVolume(this.value/100);document.getElementById('bgm-val').textContent=this.value+'%'"
+                                style="width:100%;accent-color:#c8960c;cursor:pointer;touch-action:none;">
                             <span id="bgm-val" style="font-size:10px;color:#7a5c2e;">40%</span>
                         </div>
                         <div>
@@ -679,7 +691,7 @@
             </div>
             
             <h2 class="header-title text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text mb-2 tracking-tight" style="background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                대항해 시대: 운명을 건 항해(2.5v)
+                대항해 시대: 운명을 건 항해(2.6v)
             </h2>
             <p class="text-slate-300 max-w-2xl text-sm sm:text-base mb-3 leading-relaxed px-4">
                 16세기, 유럽의 야심 찬 선장들이 미지의 신대륙과 인도를 향해 닻을 올립니다.<br>
@@ -756,6 +768,15 @@
                         <i class="fa-solid fa-wallet text-emerald-500"></i> 자산 포트폴리오
                     </h3>
                     
+                    <!-- 현재 총 자산 (강조) -->
+                    <div class="mb-2 px-2 py-1.5 rounded-xl text-center" style="background:linear-gradient(135deg,rgba(200,150,12,0.18),rgba(245,158,11,0.08));border:1.5px solid rgba(200,150,12,0.50);">
+                        <span class="text-[10px] font-bold uppercase tracking-wider block" style="color:#7a4a1a;">💰 현재 총 자산</span>
+                        <div class="flex items-baseline justify-center gap-1 mt-0.5">
+                            <span class="font-black leading-none" id="stat-total-assets" style="font-size:clamp(18px,2.5vw,26px);color:#7c2d12;text-shadow:0 1px 4px rgba(200,150,12,0.3);">1,000</span>
+                            <span class="text-[11px] font-bold" style="color:#9e7a4a;">레알</span>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-2 gap-3">
                         <div>
                             <span class="text-[12px] text-slate-500 block leading-tight">여유 현금</span>
@@ -998,6 +1019,8 @@
                         <i class="fa-solid fa-spinner animate-spin"></i> 칭호 기록을 명부를 제출하는 중입니다...
                     </div>
                 </div>
+                <!-- 레벨/경험치 표시 (간소화) -->
+                <div id="result-level-display" style="display:none;font-size:11px;color:#9e7a4a;text-align:center;padding:4px 0;"></div>
 
                 <!-- Restart Trigger -->
                 <div class="pt-1 flex flex-col sm:flex-row gap-2 justify-center text-sm">
@@ -1124,7 +1147,7 @@
             },
             {
                 title: "유럽 내 신대륙 식량 작물 본격 재배",
-                desc: "신대륙에서 들여온 구황작물 감자와 옥수수 등이 대대적으로 환영받으며 귀중한 식량 보급원으로 인정받게 됩니다.",
+                desc: "신대륙에서 들여온 감자와 옥수수가 구황작물로 대대적으로 환영받으며 귀중한 식량 보급원으로 인정받게 됩니다.",
                 impact: (s) => {
                     s.D.currentMult += 0.4; s.D.currentProb += 10;
                 }
@@ -1215,7 +1238,7 @@
             },
             {
                 title: "스페인 무적함대 카리브해 순찰 경계 강화",
-                desc: "밀무역과 도적질을 일삼는 해적선들을 척결하려 무적함대가 순찰을 시작해 모험 선박들까지 손해를 보고 있습니다.",
+                desc: "밀무역과 도적질을 일삼는 해적선들을 척결하려 무적함대가 순찰을 시작해 모험 선박들의 꼬리가 밟히고 있습니다.",
                 impact: (s) => {
                     s.B.currentProb -= 15; s.G.currentProb -= 10;
                 }
@@ -2045,6 +2068,8 @@
 
         function proceedNextRound() {
             playSound('click');
+            // 라운드 전환 시 황금열쇠 사용 제한 초기화
+            keyUsedThisRound = false;
 
             // 돌발 상황 처리 중인 경우 (돌발 투자 화면 -> 다음 라운드)
             if (window._pendingEventRound !== undefined && window._pendingEventRound !== null) {
@@ -2538,6 +2563,14 @@
                                     oninput="(function(el){ var v=parseInt(el.value); var cost=document.getElementById('cost-${shipId}'); if(v>=1){ cost.textContent=v*calculateSharePrice(ships['${shipId}'])+'레알'; } else { cost.textContent='-'; } })(this)"
                                     onblur="if(!this.value||parseInt(this.value)<1){this.value=1;}"
                                     inputmode="numeric" pattern="[0-9]*">
+                                <button onclick="(function(){ const p=calculateSharePrice(ships['${shipId}']); const m=Math.max(1,Math.round(Math.floor(cash/p)/2)); document.getElementById('qty-${shipId}').value=m; document.getElementById('cost-${shipId}').textContent=m*p+'레알'; })()"
+                                    style="background:rgba(100,180,100,0.20);color:#166534;border:1px solid rgba(34,197,94,0.35);border-radius:6px;padding:2px 5px;font-size:9px;font-weight:700;cursor:pointer;">
+                                    1/2
+                                </button>
+                                <button onclick="(function(){ const p=calculateSharePrice(ships['${shipId}']); const m=Math.max(1,Math.round(Math.floor(cash/p)/3)); document.getElementById('qty-${shipId}').value=m; document.getElementById('cost-${shipId}').textContent=m*p+'레알'; })()"
+                                    style="background:rgba(100,180,100,0.20);color:#166534;border:1px solid rgba(34,197,94,0.35);border-radius:6px;padding:2px 5px;font-size:9px;font-weight:700;cursor:pointer;">
+                                    1/3
+                                </button>
                                 <button onclick="(function(){ const p=calculateSharePrice(ships['${shipId}']); const m=Math.floor(cash/p); if(m>0){document.getElementById('qty-${shipId}').value=m; document.getElementById('cost-${shipId}').textContent=m*p+'레알';} else{showCustomAlert('현금이 부족합니다!');} })()"
                                     style="background:rgba(200,150,12,0.20);color:#7c3a00;border:1px solid rgba(200,150,12,0.4);border-radius:6px;padding:2px 6px;font-size:10px;font-weight:700;cursor:pointer;">
                                     최대
@@ -2616,6 +2649,9 @@
         function updateUI() {
             const totalWealth = calculateTotalAssets();
             document.getElementById('dashboard-total-assets').textContent = totalWealth.toLocaleString();
+            // 포트폴리오 패널 내 총 자산 업데이트
+            const statTotal = document.getElementById('stat-total-assets');
+            if (statTotal) statTotal.textContent = totalWealth.toLocaleString();
 
             // 자본 0 파산 감지 (게임 진행 중에만)
             if (currentRound > 0 && totalWealth <= 0 && !document.getElementById('screen-game').classList.contains('hidden')) {
@@ -2978,6 +3014,7 @@
                 title: earnedTitle.title,
                 allTitles: earnedTitles.map(function(t){ return t.title; }).join(' / '),
                 titles: earnedTitles.map(function(t){ return t.title; }),
+                level: (function(){ const st=JSON.parse(localStorage.getItem(`aov_stats_${playerClass}_${playerNumber}_${playerName}`)||'{}'); const tl=JSON.parse(localStorage.getItem(`aov_titles_${playerClass}_${playerNumber}_${playerName}`)||'[]').map(t=>t.title||t).filter((v,i,a)=>a.indexOf(v)===i); return calcExpAndLevel(tl, st.playCount||1, st.totalAssetsSum||finalAssets).level; })(),
                 cash: Math.round(cash), payout: Math.round(totalVoyagePayout),
                 distinctShipsInvested: distinctShipsInvested, ethicalScore: ethicalScore,
                 unethicalInvested: Math.round(totalInvestedInUnethical),
@@ -3004,8 +3041,9 @@
             const earned = []; // 획득한 칭호 전부 수집
 
             // ---- [A] 자산 규모 칭호 (구간별 1개) ----
-            if      (finalAssets >= 30000) earned.push({ tag:"A", title:"대항해 시대 바다의 황제", desc:"역사상 단 한 번도 달성된 적 없는 3만 레알의 경지. 대서양, 인도양, 태평양을 모두 손에 쥔 진정한 바다의 지배자입니다." });
-            else if (finalAssets >= 10000) earned.push({ tag:"A", title:"투자의 경지", desc:"시장의 미세한 바람과 파동의 정점을 귀신같이 짚어내고 분산과 집중 투자를 혼용하여 동대륙 무역 역사를 홀로 새로 쓴 초인의 경지입니다." });
+            if      (finalAssets >= 50000) earned.push({ tag:"A", title:"바다의 신 포세이돈", desc:"5만 레알! 인류 역사에서 단 한 번도 기록된 적 없는 전설의 수치. 대서양, 인도양, 태평양은 물론 신들의 바다까지 지배한 불멸의 존재. 그대의 이름은 영원히 역사에 새겨질 것입니다." });
+            else if (finalAssets >= 30000) earned.push({ tag:"A", title:"대항해시대 바다의 황제", desc:"역사상 단 한 번도 달성된 적 없는 3만 레알의 경지. 대서양, 인도양, 태평양을 모두 손에 쥔 진정한 바다의 지배자입니다." });
+            else if (finalAssets >= 10000) earned.push({ tag:"A", title:"대항해시대의 조지 소로스", desc:"시장의 미세한 바람과 파동의 정점을 귀신같이 짚어내고 분산과 집중 투자를 혼용하여 동대륙 무역 역사를 홀로 새로 쓴 초인의 경지입니다." });
             else if (finalAssets >= 8000)  earned.push({ tag:"A", title:"신항로의 살아있는 전설", desc:"8척의 선단을 손바닥 위에 올려놓고 움직인 듯, 거의 모든 항로에서 압도적인 성과를 거둔 대부호입니다." });
             else if (finalAssets >= 7000)  earned.push({ tag:"A", title:"리스본 증권거래소의 제왕", desc:"포르투갈 왕실마저 자문을 구하는 압도적인 자산 규모를 쌓아올린 거상입니다." });
             else if (finalAssets >= 6000)  earned.push({ tag:"A", title:"동인도 무역의 떠오르는 거성", desc:"탄탄한 안목으로 여러 항로에서 큰 수익을 연달아 거머쥔 신흥 자본가입니다." });
@@ -3179,6 +3217,7 @@
                 password: pw,
                 finalAssets: data.finalAssets,
                 grade: data.grade,
+                level: data.level || 1,
                 titles: titlesArray   // 배열로 전송 → 앱스크립트에서 가로 열로 저장
             };
             fetch(SHEET_WEBHOOK_URL, {
@@ -3227,6 +3266,7 @@
 
         // 칭호 희귀도 등급 (숫자 클수록 희귀)
         var TITLE_RARITY = {
+            "바다의 신 포세이돈": 120,
             "대항해시대 바다의 황제": 100,
             "대항해시대의 조지 소로스": 95,
             "신항로의 살아있는 전설": 88,
@@ -3301,14 +3341,15 @@
             if (playCount) totalExp += Math.floor(playCount) * 600;
             // 자산 보너스 (1000레알당 120exp)
             if (totalAssetsSum) totalExp += Math.floor(totalAssetsSum / 1000) * 120;
-            // 레벨 계산 (최대 999)
-            var level = Math.min(999, Math.floor(Math.pow(totalExp, 0.52) / 3.2) + 1);
-            var nextLvExp = level < 999 ? Math.round(Math.pow((level) * 3.2, 1/0.52)) : Infinity;
-            var prevLvExp = level > 1 ? Math.round(Math.pow((level-1)*3.2, 1/0.52)) : 0;
+            // 레벨 계산 — divisor 1.8 (약 30판에 Lv.150 도달, 최대 999)
+            var level = Math.min(999, Math.floor(Math.pow(totalExp, 0.52) / 1.8) + 1);
+            var nextLvExp = level < 999 ? Math.round(Math.pow((level) * 1.8, 1/0.52)) : Infinity;
+            var prevLvExp = level > 1 ? Math.round(Math.pow((level-1)*1.8, 1/0.52)) : 0;
             var pct = (level >= 999) ? 100 : (nextLvExp > prevLvExp ? Math.min(100, Math.round((totalExp - prevLvExp)/(nextLvExp - prevLvExp)*100)) : 100);
             return { level: level, exp: totalExp, pct: pct, nextLvExp: nextLvExp };
         }
         function getTitleRarityLabel(rarity) {
+            if (rarity >= 110) return { label: '🔱', color: '#00c8ff' };
             if (rarity >= 90) return { label: 'SSS', color: '#ff6b35' };
             if (rarity >= 75) return { label: 'SS',  color: '#f59e0b' };
             if (rarity >= 55) return { label: 'S',   color: '#a78bfa' };
@@ -3540,6 +3581,8 @@
             document.getElementById('forecast-cards-container').innerHTML = `<p class="col-span-2 text-slate-500 text-[11px] text-center py-4">1라운드 진입 시 첩보가 공개됩니다.</p>`;
             
             updateUI();
+            // 명예의 전당 새로고침 (최신 기록 표시)
+            setTimeout(() => loadHallOfFame(), 500);
         }
 
         function toggleVolumePanel() {
@@ -3598,13 +3641,36 @@
         // 🗝️ 황금 열쇠 시스템
         // ══════════════════════════════════════
         let goldenKeys = 0;
-        let grantedKeyLevels = new Set(); // 이미 지급된 레벨
+        let grantedKeyLevels = new Set(); // 더 이상 미사용 (하위호환 보존용)
         let activeKeyEffect = null; // 현재 활성 효과 { type, label, data }
+        let keyUsedThisRound = false; // 라운드당 1회 사용 제한
 
-        // 레벨별 열쇠 지급 기준 [레벨, 지급 수]
+        // 매판 지급 기준표 [최소레벨, 지급 수] (높은 레벨일수록 적용)
         const KEY_LEVEL_GRANTS = [
-            [50,1],[150,2],[250,3],[350,4],[450,5],[500,6]
+            [500, 6],
+            [450, 5],
+            [350, 4],
+            [250, 3],
+            [150, 2],
+            [50,  1],
         ];
+
+        // 현재 레벨에 해당하는 매판 지급 개수
+        function getPerPlayKeys(level) {
+            for (const [lv, cnt] of KEY_LEVEL_GRANTS) {
+                if (level >= lv) return cnt;
+            }
+            return 0;
+        }
+
+        // 다음 지급 레벨 (현재보다 높은 것 중 가장 낮은 것)
+        function getNextKeyLevel(currentLevel) {
+            const tiers = [...KEY_LEVEL_GRANTS].reverse(); // 낮은 레벨부터
+            for (const [lv] of tiers) {
+                if (lv > currentLevel) return lv;
+            }
+            return null;
+        }
 
         // 효과 정의
         const KEY_EFFECTS = [
@@ -3618,15 +3684,7 @@
             { type:'disaster',      label:'대형 사고',       desc:'⚠️ 불운! 선박 1척이 강제로 항해 실패합니다.' },
         ];
 
-        // 현재 레벨에서 다음 열쇠 지급 레벨 계산
-        function getNextKeyLevel(currentLevel) {
-            for (const [lv] of KEY_LEVEL_GRANTS) {
-                if (lv > currentLevel) return lv;
-            }
-            return null;
-        }
-
-        // 로컬 스토리지에서 부여된 레벨 로드
+        // 로컬 스토리지에서 부여된 레벨 로드 (하위호환용)
         function loadGrantedKeyLevels() {
             try {
                 const key = `aov_grantedKeys_${playerClass}_${playerNumber}_${playerName}`;
@@ -3641,21 +3699,13 @@
             } catch(e) {}
         }
 
-        // 레벨 업 시 열쇠 지급 체크 (게임 종료 후 호출)
+        // 게임 종료 후 레벨에 따라 황금열쇠 매판 지급
         function checkAndGrantKeys(currentLevel) {
-            loadGrantedKeyLevels();
-            let granted = 0;
-            for (const [lv, cnt] of KEY_LEVEL_GRANTS) {
-                if (currentLevel >= lv && !grantedKeyLevels.has(lv)) {
-                    grantedKeyLevels.add(lv);
-                    goldenKeys += cnt;
-                    granted += cnt;
-                }
-            }
-            if (granted > 0) {
-                saveGrantedKeyLevels();
+            const perPlay = getPerPlayKeys(currentLevel);
+            if (perPlay > 0) {
+                goldenKeys += perPlay;
                 saveGoldenKeys();
-                showCustomAlert(`🗝️ 황금 열쇠 ${granted}개를 획득했습니다! (총 ${goldenKeys}개)`);
+                showCustomAlert(`🗝️ 황금 열쇠 ${perPlay}개 지급! (Lv.${currentLevel} 보너스, 총 ${goldenKeys}개)`);
             }
         }
 
@@ -3701,15 +3751,28 @@
             let stats2 = { playCount: 0, totalAssetsSum: 0 };
             try { stats2 = JSON.parse(localStorage.getItem(statKey2) || '{}'); } catch(e){}
             const lv = calcExpAndLevel(titleList, stats2.playCount || 0, stats2.totalAssetsSum || 0).level;
+            const perPlay = getPerPlayKeys(lv);
             const nextLv = getNextKeyLevel(lv);
-            const nextInfo = nextLv ? `다음 열쇠: <b style="color:#f59e0b">Lv.${nextLv}</b> 도달 시 지급` : `<b style="color:#f59e0b">최대 레벨 열쇠 모두 획득!</b>`;
+            const perPlayInfo = perPlay > 0
+                ? `현재 레벨 <b style="color:#f59e0b">Lv.${lv}</b> → 매판 <b style="color:#f59e0b">${perPlay}개</b> 지급 중`
+                : `<span style="color:#9e7a4a">Lv.50 미만 — 아직 열쇠 지급 없음</span>`;
+            const nextInfo = nextLv
+                ? `다음 단계: <b style="color:#f59e0b">Lv.${nextLv}</b> 달성 시 매판 ${[...KEY_LEVEL_GRANTS].find(([l])=>l===nextLv)?.[1] ?? '?'}개로 증가`
+                : `<b style="color:#f59e0b">최고 등급! 매판 ${perPlay}개 지급 중</b>`;
+            const grantTable = [...KEY_LEVEL_GRANTS].slice().reverse()
+                .map(([l,c]) => `<span style="font-size:10px;color:${lv>=l?'#f59e0b':'#5c3d11'};font-weight:${lv>=l?'900':'400'};">Lv.${l}→${c}개</span>`).join(' &nbsp;');
+            const usedInfo = keyUsedThisRound
+                ? `<div style="margin-top:6px;font-size:10px;color:#f87171;font-weight:700;">⚠️ 이번 라운드 이미 사용함 (라운드당 1회 제한)</div>`
+                : '';
             const effectList = KEY_EFFECTS.map(e => `• <b>${e.label}</b>: ${e.desc}`).join('<br>');
-            tip.innerHTML = `<div style="margin-bottom:8px;font-weight:900;color:#c8960c;">🗝️ 황금 열쇠 (보유: ${goldenKeys}개)</div>`
-                + `<div style="margin-bottom:8px;font-size:10px;color:#9e7a4a;">${nextInfo}</div>`
-                + `<div style="font-size:10px;color:#c8960c;font-weight:700;margin-bottom:4px;">지급 기준</div>`
-                + KEY_LEVEL_GRANTS.map(([lv,cnt])=>`<span style="font-size:10px;color:#9e7a4a;">Lv.${lv} → ${cnt}개</span>`).join(' &nbsp;')
+            tip.innerHTML = `<div style="margin-bottom:6px;font-weight:900;color:#c8960c;">🗝️ 황금 열쇠 (보유: ${goldenKeys}개)</div>`
+                + `<div style="margin-bottom:4px;font-size:10px;">${perPlayInfo}</div>`
+                + `<div style="margin-bottom:8px;font-size:10px;color:#7a5c2e;">${nextInfo}</div>`
+                + `<div style="font-size:10px;color:#c8960c;font-weight:700;margin-bottom:4px;">📊 매판 지급 기준</div>`
+                + `<div style="margin-bottom:4px;">${grantTable}</div>`
+                + usedInfo
                 + `<div style="border-top:1px solid rgba(200,150,12,0.2);margin:8px 0;"></div>`
-                + `<div style="font-size:10px;color:#c8960c;font-weight:700;margin-bottom:4px;">효과 목록 (각 12.5%)</div>`
+                + `<div style="font-size:10px;color:#c8960c;font-weight:700;margin-bottom:4px;">🎲 효과 목록 (각 12.5%)</div>`
                 + `<div style="font-size:10px;color:#9e7a4a;line-height:1.7;">${effectList}</div>`;
 
             // 위치 계산: 버튼 기준, 화면 밖 안 나가게
@@ -3718,14 +3781,12 @@
             const btn = document.getElementById('golden-key-btn');
             const vw = window.innerWidth;
             const vh = window.innerHeight;
-            const tipW = Math.min(280, vw - 16);
+            const tipW = Math.min(300, vw - 16);
             tip.style.width = tipW + 'px';
             const rect = btn ? btn.getBoundingClientRect() : {left:0, right:vw, bottom:40};
-            // 가로: 오른쪽 정렬 기본, 화면 왼쪽 넘으면 왼쪽 정렬
             let left = rect.right - tipW;
             if (left < 8) left = 8;
             if (left + tipW > vw - 8) left = vw - tipW - 8;
-            // 세로: 버튼 아래, 공간 없으면 위
             const tipH = tip.offsetHeight;
             let top = rect.bottom + 6;
             if (top + tipH > vh - 8) top = rect.top - tipH - 6;
@@ -3745,7 +3806,7 @@
             if (!banner || !txt) return;
             if (effect) {
                 txt.textContent = `[${effect.label}] ${effect.desc}`;
-                banner.style.display = '';
+                banner.style.display = 'flex';
             } else {
                 banner.style.display = 'none';
             }
@@ -3754,6 +3815,10 @@
         function useGoldenKey() {
             if (goldenKeys <= 0) {
                 showCustomAlert('🗝️ 보유한 황금 열쇠가 없습니다.');
+                return;
+            }
+            if (keyUsedThisRound) {
+                showCustomAlert('⚠️ 이번 라운드에 이미 황금 열쇠를 사용했습니다. 다음 라운드에 사용하세요!');
                 return;
             }
             // 확인창
@@ -3775,6 +3840,7 @@
         function confirmUseKey(btn) {
             btn.closest('[style*=fixed]').remove();
             goldenKeys--;
+            keyUsedThisRound = true;
             saveGoldenKeys();
             updateGoldenKeyUI();
 
@@ -3895,6 +3961,8 @@
 
         // 전체 칭호 목록 (모든 존재 칭호 + 내가 획득한 것 표시)
         const ALL_TITLES_LIST = [
+            // SSSS (전설)
+            {title:"바다의 신 포세이돈", rarity:120, hint:"최종 자산 50,000 레알 이상 달성 (전설의 경지)"},
             // SSS
             {title:"대항해시대 바다의 황제", rarity:100, hint:"최종 자산 30,000 레알 이상 달성"},
             {title:"대항해시대의 조지 소로스", rarity:95, hint:"최종 자산 10,000 레알 이상 달성"},
