@@ -474,8 +474,29 @@
             if (!audioCtx) {
                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             }
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+            // 모바일에서 suspended 상태 해제
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(() => {});
+            }
         }
+
+        // 첫 터치/클릭 시 AudioContext unlock (모바일 필수)
+        function unlockAudio() {
+            initAudio();
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            // 무음 버퍼 재생으로 unlock
+            try {
+                const buf = audioCtx.createBuffer(1, 1, 22050);
+                const src = audioCtx.createBufferSource();
+                src.buffer = buf;
+                src.connect(audioCtx.destination);
+                src.start(0);
+            } catch(e) {}
+        }
+        document.addEventListener('click',     unlockAudio, { once: true });
+        document.addEventListener('touchstart', unlockAudio, { once: true });
 
         // BGM 시작 (파일명: bgm.mp3 — HTML과 같은 폴더에 위치)
         function startBGM() {
@@ -492,8 +513,16 @@
             if (bgmAudio) { bgmAudio.pause(); bgmAudio.currentTime = 0; bgmStarted = false; }
         }
         function setBGMVolume(v) {
-            bgmVolume = v;
-            if (bgmAudio) bgmAudio.volume = v;
+            bgmVolume = parseFloat(v) || 0;
+            if (bgmAudio) {
+                bgmAudio.volume = bgmVolume;
+                // 볼륨 0이면 일시정지, 0 초과면 재생
+                if (bgmVolume <= 0) {
+                    bgmAudio.pause();
+                } else if (bgmAudio.paused && bgmStarted) {
+                    bgmAudio.play().catch(() => {});
+                }
+            }
             saveVolumeSettings();
         }
 
@@ -550,6 +579,12 @@
                 } else if (type === 'fail') {
                     note(220, 0,   0.6, 'sawtooth', 0.12);
                     note(110, 0.3, 0.9, 'sawtooth', 0.14);
+                } else if (type === 'last_round') {
+                    // 마지막 투자 - 장중한 종소리
+                    note(233.08, 0,    1.2, 'sine', 0.15);
+                    note(174.61, 0.15, 1.4, 'sine', 0.12);
+                    note(130.81, 0.3,  1.8, 'sine', 0.10);
+                    note(293.66, 0.6,  2.0, 'triangle', 0.08);
                 }
             } catch (e) {
                 console.log("Audio context blocked or unsupported:", e);
@@ -644,7 +679,7 @@
             </div>
             
             <h2 class="header-title text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text mb-2 tracking-tight" style="background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                대항해 시대: 운명을 건 항해(2.2v)
+                대항해 시대: 운명을 건 항해(2.5v)
             </h2>
             <p class="text-slate-300 max-w-2xl text-sm sm:text-base mb-3 leading-relaxed px-4">
                 16세기, 유럽의 야심 찬 선장들이 미지의 신대륙과 인도를 향해 닻을 올립니다.<br>
@@ -1894,7 +1929,7 @@
         // ----------------------------------------------------
         // NEXT SITUATION FORECAST SYSTEM (다음 정세 예측 카드 4개 : 40/30/20/10%)
         // ----------------------------------------------------
-        const FORECAST_WEIGHTS = [30, 25, 25, 20];
+        const FORECAST_WEIGHTS = [40, 30, 20, 10];
         let currentForecastPool = []; // [{situation, weight}, ...] 현재 라운드에서 예고된 4개 후보
 
         // 이미 발생한 상황 추적 (플레이 중 중복 방지) - generateForecastCards보다 먼저 선언 필수
@@ -2024,7 +2059,9 @@
             if (currentRound === 0) {
                 confirmMsg = "초기 포트폴리오 구성을 마감하고 본격적으로 정세 변화가 시작되는 [제 1라운드] 소식지를 인쇄하시겠습니까?";
             } else if (currentRound === TOTAL_ROUNDS) {
-                confirmMsg = `모든 ${TOTAL_ROUNDS}라운드 모험 투자가 마감되었습니다. 최종 대항해 출항 결과 시뮬레이션을 돌리시겠습니까?`;
+                confirmMsg = `⚓ 마지막 투자 라운드입니다! 이제 더 이상 투자 기회가 없습니다. 포트폴리오를 확인하고 최종 출항을 준비하세요.`;
+                // 마지막 라운드 효과음
+                playSound('last_round');
             } else {
                 confirmMsg = `현재 라운드 투자를 매듭짓고 제 ${currentRound + 1}라운드의 세계 정세 소식지를 받아보시겠습니까?`;
             }
@@ -2620,8 +2657,14 @@
             if (currentRound === 0) {
                 nextBtnText.innerHTML = "1라운드 출항 (정세 변화 개시)";
             } else if (currentRound === TOTAL_ROUNDS) {
-                nextBtnText.innerHTML = `<strong class="text-amber-300">최종 목적지 도착 정산</strong>`;
+                nextBtnText.innerHTML = `⚓ <strong class="text-amber-200">마지막 투자! 출항 정산하기</strong> ⚓`;
+                document.getElementById('btn-next-round').style.background = 'linear-gradient(135deg,#92400e,#b45309)';
+                document.getElementById('btn-next-round').style.boxShadow = '0 0 20px rgba(245,158,11,0.5)';
+                document.getElementById('btn-next-round').classList.add('animate-pulse');
             } else {
+                document.getElementById('btn-next-round').style.background = '';
+                document.getElementById('btn-next-round').style.boxShadow = '';
+                document.getElementById('btn-next-round').classList.remove('animate-pulse');
                 nextBtnText.textContent = "라운드 마감 및 다음 호외 기사 확인";
             }
 
@@ -2902,13 +2945,32 @@
             localStorage.setItem(myTitlesKey, JSON.stringify(myTitles.slice(-50)));
 
             // 결과를 구글 스프레드시트로 제출 (칭호 수집 명부 기록)
-            // 레벨 업 열쇠 지급 체크
+            // 레벨 업 - 플레이 횟수/누적자산 로컬 저장 후 레벨 계산
             {
+                const statKey = `aov_stats_${playerClass}_${playerNumber}_${playerName}`;
+                let stats = { playCount: 0, totalAssetsSum: 0 };
+                try { stats = JSON.parse(localStorage.getItem(statKey) || '{}');
+                    stats.playCount = (stats.playCount || 0) + 1;
+                    stats.totalAssetsSum = (stats.totalAssetsSum || 0) + finalAssets;
+                } catch(e) { stats = { playCount: 1, totalAssetsSum: finalAssets }; }
+                localStorage.setItem(statKey, JSON.stringify(stats));
+
                 const myTitlesAll = [];
-                try { JSON.parse(localStorage.getItem(`aov_titles_${playerClass}_${playerNumber}_${playerName}`) || '[]').forEach(t => myTitlesAll.push(t.title||t)); } catch(e){}
-                const playCount = (myTitlesAll.length > 0 ? 1 : 0); // 최소 추정
-                const lvNow = calcExpAndLevel(myTitlesAll, playCount, finalAssets).level;
+                try { JSON.parse(localStorage.getItem(`aov_titles_${playerClass}_${playerNumber}_${playerName}`) || '[]').forEach(t => {
+                    const title = t.title || t;
+                    if (title && !myTitlesAll.includes(title)) myTitlesAll.push(title);
+                }); } catch(e){}
+
+                const lvNow = calcExpAndLevel(myTitlesAll, stats.playCount, stats.totalAssetsSum).level;
                 checkAndGrantKeys(lvNow);
+
+                // 결과 화면에 레벨 표시 (있으면)
+                const lvEl = document.getElementById('result-level-display');
+                if (lvEl) {
+                    const expInfo = calcExpAndLevel(myTitlesAll, stats.playCount, stats.totalAssetsSum);
+                    lvEl.textContent = `Lv.${expInfo.level}  (${expInfo.exp} exp) — 플레이 ${stats.playCount}회`;
+                    lvEl.style.display = '';
+                }
             }
             submitResultToSheet({
                 playerClass: playerClass, playerNumber: playerNumber, playerName: playerName,
@@ -3229,16 +3291,16 @@
         // 경험치: 칭호 희귀도의 합산
         // calcExpAndLevel(titleList, playCount, totalAssetsSum)
         // titleList: 획득 칭호 배열
-        // playCount: 총 플레이 횟수 (기본점 100/회)
-        // totalAssetsSum: 누적 최고 자산 합산 (1000레알 당 20exp)
+        // playCount: 총 플레이 횟수 (기본점 600/회)
+        // totalAssetsSum: 누적 자산 합산 (1000레알 당 120exp)
         function calcExpAndLevel(titleList, playCount, totalAssetsSum) {
             var totalExp = 0;
-            // 칭호 exp
-            titleList.forEach(function(t) { totalExp += getTitleRarity(t) * 10; });
-            // 기본 플레이 점수 (플레이당 100exp)
-            if (playCount) totalExp += Math.floor(playCount) * 100;
-            // 자산 보너스 (1000레알당 20exp, 최고 자산 기준)
-            if (totalAssetsSum) totalExp += Math.floor(totalAssetsSum / 1000) * 20;
+            // 칭호 exp (rarity × 60, 중복 제외)
+            titleList.forEach(function(t) { totalExp += getTitleRarity(t) * 60; });
+            // 기본 플레이 점수 (플레이당 600exp)
+            if (playCount) totalExp += Math.floor(playCount) * 600;
+            // 자산 보너스 (1000레알당 120exp)
+            if (totalAssetsSum) totalExp += Math.floor(totalAssetsSum / 1000) * 120;
             // 레벨 계산 (최대 999)
             var level = Math.min(999, Math.floor(Math.pow(totalExp, 0.52) / 3.2) + 1);
             var nextLvExp = level < 999 ? Math.round(Math.pow((level) * 3.2, 1/0.52)) : Infinity;
@@ -3634,8 +3696,11 @@
             // 내용 채우기
             const myTitlesKey = `aov_titles_${playerClass}_${playerNumber}_${playerName}`;
             let titleList = [];
-            try { titleList = JSON.parse(localStorage.getItem(myTitlesKey)||'[]').map(t=>t.title||t); } catch(e){}
-            const lv = calcExpAndLevel(titleList).level;
+            try { titleList = JSON.parse(localStorage.getItem(myTitlesKey)||'[]').map(t=>t.title||t).filter((v,i,a)=>a.indexOf(v)===i); } catch(e){}
+            const statKey2 = `aov_stats_${playerClass}_${playerNumber}_${playerName}`;
+            let stats2 = { playCount: 0, totalAssetsSum: 0 };
+            try { stats2 = JSON.parse(localStorage.getItem(statKey2) || '{}'); } catch(e){}
+            const lv = calcExpAndLevel(titleList, stats2.playCount || 0, stats2.totalAssetsSum || 0).level;
             const nextLv = getNextKeyLevel(lv);
             const nextInfo = nextLv ? `다음 열쇠: <b style="color:#f59e0b">Lv.${nextLv}</b> 도달 시 지급` : `<b style="color:#f59e0b">최대 레벨 열쇠 모두 획득!</b>`;
             const effectList = KEY_EFFECTS.map(e => `• <b>${e.label}</b>: ${e.desc}`).join('<br>');
