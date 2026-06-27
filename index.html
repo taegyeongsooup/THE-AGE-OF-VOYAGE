@@ -149,7 +149,7 @@
         }
         /* 투자 중인 카드 - 단색 황금 배경 */
         .ship-card.is-owned {
-            background: #fbbf24 !important;
+            background: #e8cc6a !important;
         }
         /* 내부 반투명 영역들은 흰색으로 덮어서 가독성 확보 */
         .ship-card.is-owned .bg-slate-950\/40,
@@ -632,10 +632,9 @@
                 </div>
             </div>
 
-            <!-- 활성 황금 열쇠 효과 표시 (타이틀이 왼쪽에, 효과 텍스트가 오른쪽에) -->
-            <div id="active-key-effect-banner" style="display:none;flex:1;max-width:420px;background:linear-gradient(135deg,rgba(200,150,12,0.18),rgba(245,158,11,0.08));border:1px solid rgba(200,150,12,0.45);border-radius:10px;padding:4px 12px;font-size:11px;color:#f59e0b;font-weight:700;line-height:1.4;flex-direction:row;align-items:center;gap:8px;">
-                <span style="font-size:10px;color:#c8960c;font-weight:900;white-space:nowrap;">🗝️ 활성 효과</span>
-                <span id="active-key-effect-text" style="flex:1;font-size:11px;"></span>
+            <!-- 뽑아둔 황금열쇠 효과 버튼들 -->
+            <div id="drawn-effects-area" style="display:none;flex:1;display:flex;flex-wrap:wrap;gap:4px;align-items:center;max-width:480px;min-width:0;">
+                <!-- JS로 동적 렌더링 -->
             </div>
             
             <!-- Dashboard Stats (오른쪽) -->
@@ -673,7 +672,8 @@
                             <div style="font-size:10px;color:#9e7a4a;margin-bottom:4px;">🎵 배경음</div>
                             <input type="range" id="bgm-slider" min="0" max="100" value="40" 
                                 oninput="setBGMVolume(this.value/100);document.getElementById('bgm-val').textContent=this.value+'%'"
-                                ontouchstart="unlockAudio()" ontouchmove="setBGMVolume(this.value/100);document.getElementById('bgm-val').textContent=this.value+'%'"
+                                ontouchstart="unlockAudio();setBGMVolume(this.value/100);document.getElementById('bgm-val').textContent=this.value+'%'"
+                                ontouchmove="(function(e){e.preventDefault();var t=e.touches[0];var el=document.getElementById('bgm-slider');var rect=el.getBoundingClientRect();var pct=Math.min(1,Math.max(0,(t.clientX-rect.left)/rect.width));el.value=Math.round(pct*100);setBGMVolume(pct);document.getElementById('bgm-val').textContent=Math.round(pct*100)+'%';})(event)"
                                 style="width:100%;accent-color:#c8960c;cursor:pointer;touch-action:none;">
                             <span id="bgm-val" style="font-size:10px;color:#7a5c2e;">40%</span>
                         </div>
@@ -707,7 +707,7 @@
             </div>
             
             <h2 class="header-title text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text mb-2 tracking-tight" style="background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                대항해 시대: 운명을 건 항해(2.6v)
+                대항해 시대: 운명을 건 항해(2.9v)
             </h2>
             <p class="text-slate-300 max-w-2xl text-sm sm:text-base mb-3 leading-relaxed px-4">
                 16세기, 유럽의 야심 찬 선장들이 미지의 신대륙과 인도를 향해 닻을 올립니다.<br>
@@ -1059,7 +1059,7 @@
         // 아래 URL을 본인의 Google Apps Script 웹앱 배포 URL로 교체하세요.
         // (Google Sheets > 확장 프로그램 > Apps Script 에서 webhook 코드를 배포한 뒤 "웹앱 URL"을 붙여넣으면
         //  게임 결과 제출 시 자동으로 칭호 기록이 시트에 누적되고, 로비 화면의 명예의 전당 TOP10도 이 URL에서 데이터를 읽어옵니다.)
-        const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbzR_PZUn2ln8XO56jQVJ9VL6eX3TxG01M9QqhBAbFLkYPyY-cijvWl9b1tqgCxabz45/exec"
+        const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxAGq1N9ak_RV4mY0iOcYYF3yMAdJ8KvG5g7vZLu5QzGkMQQF48NmsV7MzH_bbQVmz2/exec"
 
         // ----------------------------------------------------
         // PLAYER IDENTITY (반 / 번호 / 이름)
@@ -1100,14 +1100,14 @@
 
         // 8 Ships Initial Configurations (Includes Captain and Cargo Img links placeholder)
         const baseShips = {
-            A: { id: "A", name: "산타 마리아 호", captain: "디아스 선장", cargo: "후추", destination: "인도 코친", baseProb: 70, currentProb: 70, baseMult: 1.5, currentMult: 1.5, isUnethical: false, icon: "fa-seedling", bg: "from-emerald-950/50 to-emerald-900/10", border: "border-emerald-800/60", badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", history: [50], captainImg: "captain_A.jpg", goodsImg: "goods_A.jpg", flagImg: "flag_A.png", routeImg: "route_A.jpg" },
-            B: { id: "B", name: "골든 하인드 호", captain: "드레이크 선장", cargo: "정향", destination: "몰루카 제도", baseProb: 40, currentProb: 40, baseMult: 3.0, currentMult: 3.0, isUnethical: false, isPirate: true, icon: "fa-leaf", bg: "from-blue-950/50 to-blue-900/10", border: "border-blue-800/60", badgeColor: "bg-blue-500/10 text-blue-400 border-blue-500/20", history: [50], captainImg: "captain_B.jpg", goodsImg: "goods_B.jpg", flagImg: "flag_B.png", routeImg: "route_B.jpg" },
-            C: { id: "C", name: "엘카노의 전함", captain: "엘카노 선장", cargo: "은괴", destination: "페루 포토시", baseProb: 60, currentProb: 60, baseMult: 2.0, currentMult: 2.0, isUnethical: false, icon: "fa-coins", bg: "from-cyan-950/50 to-cyan-900/10", border: "border-cyan-800/60", badgeColor: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", history: [50], captainImg: "captain_C.jpg", goodsImg: "goods_C.jpg", flagImg: "flag_C.png", routeImg: "route_C.jpg" },
-            D: { id: "D", name: "산 프란시스코 호", captain: "고메스 선장", cargo: "감자", destination: "신대륙 연안", baseProb: 80, currentProb: 80, baseMult: 1.2, currentMult: 1.2, isUnethical: false, icon: "fa-wheat-awn", bg: "from-amber-950/50 to-amber-900/10", border: "border-amber-800/60", badgeColor: "bg-amber-500/10 text-amber-400 border-amber-500/20", history: [50], captainImg: "captain_D.jpg", goodsImg: "goods_D.jpg", flagImg: "flag_D.png", routeImg: "route_D.jpg" },
-            E: { id: "E", name: "블랙 에보니 호", captain: "호킨스 선장", cargo: "노예", destination: "카리브해 농장", baseProb: 50, currentProb: 50, baseMult: 4.5, currentMult: 4.5, isUnethical: true, icon: "fa-link", bg: "from-rose-950/50 to-rose-900/10", border: "border-rose-800/60", badgeColor: "bg-rose-500/10 text-rose-400 border-rose-500/20", history: [50], captainImg: "captain_E.jpg", goodsImg: "goods_E.jpg", flagImg: "flag_E.png", routeImg: "route_E.jpg" },
-            F: { id: "F", name: "빅토리아 호", captain: "마젤란 선장", cargo: "비단", destination: "필리핀 항로", baseProb: 30, currentProb: 30, baseMult: 5.0, currentMult: 5.0, isUnethical: false, icon: "fa-scroll", bg: "from-purple-950/50 to-purple-900/10", border: "border-purple-800/60", badgeColor: "bg-purple-500/10 text-purple-400 border-purple-500/20", history: [50], captainImg: "captain_F.jpg", goodsImg: "goods_F.jpg", flagImg: "flag_F.png", routeImg: "route_F.jpg" },
-            G: { id: "G", name: "이스파뇰라 호", captain: "코르테스 선장", cargo: "설탕", destination: "쿠바 식민지", baseProb: 65, currentProb: 65, baseMult: 1.8, currentMult: 1.8, isUnethical: false, icon: "fa-cubes-stacked", bg: "from-indigo-950/50 to-indigo-900/10", border: "border-indigo-800/60", badgeColor: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20", history: [50], captainImg: "captain_G.jpg", goodsImg: "goods_G.jpg", flagImg: "flag_G.png", routeImg: "route_G.jpg" },
-            H: { id: "H", name: "레반트의 별 호", captain: "피에트로 상인", cargo: "면직물", destination: "베네치아 항구", baseProb: 85, currentProb: 85, baseMult: 1.1, currentMult: 1.1, isUnethical: false, icon: "fa-shirt", bg: "from-slate-900 to-slate-900/40", border: "border-slate-800/60", badgeColor: "bg-slate-500/10 text-slate-400 border-slate-500/20", history: [50], captainImg: "captain_H.jpg", goodsImg: "goods_H.jpg", flagImg: "flag_H.png", routeImg: "route_H.jpg" }
+            A: { id: "A", name: "산타 마리아 호", captain: "디아스 선장", cargo: "후추", destination: "인도 코친", baseProb: 60, currentProb: 60, baseMult: 1.5, currentMult: 1.5, isUnethical: false, icon: "fa-seedling", bg: "from-emerald-950/50 to-emerald-900/10", border: "border-emerald-800/60", badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", history: [50], captainImg: "captain_A.jpg", goodsImg: "goods_A.jpg", flagImg: "flag_A.png", routeImg: "route_A.jpg" },
+            B: { id: "B", name: "골든 하인드 호", captain: "드레이크 선장", cargo: "정향", destination: "몰루카 제도", baseProb: 35, currentProb: 35, baseMult: 3.0, currentMult: 3.0, isUnethical: false, isPirate: true, icon: "fa-leaf", bg: "from-blue-950/50 to-blue-900/10", border: "border-blue-800/60", badgeColor: "bg-blue-500/10 text-blue-400 border-blue-500/20", history: [50], captainImg: "captain_B.jpg", goodsImg: "goods_B.jpg", flagImg: "flag_B.png", routeImg: "route_B.jpg" },
+            C: { id: "C", name: "엘카노의 전함", captain: "엘카노 선장", cargo: "은괴", destination: "페루 포토시", baseProb: 55, currentProb: 55, baseMult: 2.0, currentMult: 2.0, isUnethical: false, icon: "fa-coins", bg: "from-cyan-950/50 to-cyan-900/10", border: "border-cyan-800/60", badgeColor: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20", history: [50], captainImg: "captain_C.jpg", goodsImg: "goods_C.jpg", flagImg: "flag_C.png", routeImg: "route_C.jpg" },
+            D: { id: "D", name: "산 프란시스코 호", captain: "고메스 선장", cargo: "감자", destination: "신대륙 연안", baseProb: 75, currentProb: 75, baseMult: 1.2, currentMult: 1.2, isUnethical: false, icon: "fa-wheat-awn", bg: "from-amber-950/50 to-amber-900/10", border: "border-amber-800/60", badgeColor: "bg-amber-500/10 text-amber-400 border-amber-500/20", history: [50], captainImg: "captain_D.jpg", goodsImg: "goods_D.jpg", flagImg: "flag_D.png", routeImg: "route_D.jpg" },
+            E: { id: "E", name: "블랙 에보니 호", captain: "호킨스 선장", cargo: "노예", destination: "카리브해 농장", baseProb: 45, currentProb: 45, baseMult: 4.5, currentMult: 4.5, isUnethical: true, icon: "fa-link", bg: "from-rose-950/50 to-rose-900/10", border: "border-rose-800/60", badgeColor: "bg-rose-500/10 text-rose-400 border-rose-500/20", history: [50], captainImg: "captain_E.jpg", goodsImg: "goods_E.jpg", flagImg: "flag_E.png", routeImg: "route_E.jpg" },
+            F: { id: "F", name: "빅토리아 호", captain: "마젤란 선장", cargo: "비단", destination: "필리핀 항로", baseProb: 25, currentProb: 25, baseMult: 5.0, currentMult: 5.0, isUnethical: false, icon: "fa-scroll", bg: "from-purple-950/50 to-purple-900/10", border: "border-purple-800/60", badgeColor: "bg-purple-500/10 text-purple-400 border-purple-500/20", history: [50], captainImg: "captain_F.jpg", goodsImg: "goods_F.jpg", flagImg: "flag_F.png", routeImg: "route_F.jpg" },
+            G: { id: "G", name: "이스파뇰라 호", captain: "코르테스 선장", cargo: "설탕", destination: "쿠바 식민지", baseProb: 60, currentProb: 60, baseMult: 1.8, currentMult: 1.8, isUnethical: false, icon: "fa-cubes-stacked", bg: "from-indigo-950/50 to-indigo-900/10", border: "border-indigo-800/60", badgeColor: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20", history: [50], captainImg: "captain_G.jpg", goodsImg: "goods_G.jpg", flagImg: "flag_G.png", routeImg: "route_G.jpg" },
+            H: { id: "H", name: "레반트의 별 호", captain: "피에트로 상인", cargo: "면직물", destination: "베네치아 항구", baseProb: 80, currentProb: 80, baseMult: 1.1, currentMult: 1.1, isUnethical: false, icon: "fa-shirt", bg: "from-slate-900 to-slate-900/40", border: "border-slate-800/60", badgeColor: "bg-slate-500/10 text-slate-400 border-slate-500/20", history: [50], captainImg: "captain_H.jpg", goodsImg: "goods_H.jpg", flagImg: "flag_H.png", routeImg: "route_H.jpg" }
         };
 
         // Deep copy of ships state
@@ -1820,7 +1820,9 @@
 
             // 새 게임 시작 시 활성 효과 초기화
             activeKeyEffect = null;
+            drawnEffects = [];
             keyUsedThisRound = false;
+            renderDrawnEffects();
             const banner = document.getElementById('active-key-effect-banner');
             if (banner) banner.style.display = 'none';
 
@@ -2147,8 +2149,9 @@
 
         function proceedNextRound() {
             playSound('click');
-            // 라운드 전환 시 황금열쇠 사용 제한 초기화
-            keyUsedThisRound = false;
+            // 라운드 전환 시 예언서 외 일회성 효과들 정리
+            drawnEffects = drawnEffects.filter(e => !e._used || e.type === 'prophecy');
+            activeKeyEffect = drawnEffects.find(e => !e._used) || null;
 
             // 돌발 상황 처리 중인 경우 (돌발 투자 화면 -> 다음 라운드)
             if (window._pendingEventRound !== undefined && window._pendingEventRound !== null) {
@@ -2264,8 +2267,7 @@
                 sit.impact(ships);
 
                 // 정세 변화 발생 시 메인 외 다른 7척 포함 모든 선박의 가치 동반 자동 변동
-                applyGlobalMarketFluctuations(sit.mainShip, sitIndex);
-                // 추가 글로벌 변동 (더 극적인 시세 변화)
+                // 글로벌 변동 1회: 정세 관련 선박은 함수 내에서 자동 제외됨
                 applyGlobalMarketFluctuations(null, sitIndex);
 
                 // 값 하한선 상한선 정렬
@@ -2360,19 +2362,25 @@
         };
 
         function applyGlobalMarketFluctuations(excludeShipId, sitIndex) {
+            // 정세 관련 선박 보호 맵 (pos: 반드시 +, neg: 반드시 -)
             const protection = (sitIndex !== undefined && sitIndex !== null)
                 ? (SITUATION_SHIP_PROTECTION[sitIndex] || {})
                 : {};
-            for (const shipId in ships) {
-                if (shipId === excludeShipId) continue;
-                if (ships[shipId]._ruined) continue;
 
-                // 확률 변동: -6 ~ +7
-                // 이벤트 관련 선박은 글로벌 노이즈 방향을 이벤트 취지에 맞게 고정
-                // 시장 동결 효과 적용 중이면 노이즈 0
-                let probDelta = (activeKeyEffect && activeKeyEffect.type === 'market_fix') ? 0 : Math.floor(Math.random() * 14) - 6;
-                if (protection[shipId] === 'pos') probDelta = Math.abs(probDelta);
-                else if (protection[shipId] === 'neg') probDelta = -Math.abs(probDelta);
+            // 시장 동결 효과 여부
+            const frozen = drawnEffects.some(e => e.type === 'market_fix' && e._used && !e._expired)
+                || (activeKeyEffect && activeKeyEffect.type === 'market_fix');
+
+            for (const shipId in ships) {
+                if (ships[shipId]._ruined) continue;
+                if (excludeShipId && shipId === excludeShipId) continue;
+
+                // 랜덤 변동값 (-6 ~ +7)
+                let probDelta = frozen ? 0 : Math.floor(Math.random() * 14) - 6;
+
+                // 정세 관련 선박은 방향만 고정 (완전 제외 X)
+                if (protection[shipId] === 'pos') probDelta = Math.abs(probDelta) + 1;
+                else if (protection[shipId] === 'neg') probDelta = -(Math.abs(probDelta) + 1);
 
                 ships[shipId].currentProb = Math.max(0, Math.min(98, ships[shipId].currentProb + probDelta));
                 if (ships[shipId].currentProb <= 0) {
@@ -2380,8 +2388,7 @@
                     ships[shipId]._ruined = true;
                 }
 
-                // 배율 변동: -0.3 ~ +0.3
-                const multDelta = (Math.random() * 0.6 - 0.3);
+                const multDelta = Math.random() * 0.6 - 0.3;
                 ships[shipId].currentMult = Math.max(0.3, Math.round((ships[shipId].currentMult + multDelta) * 10) / 10);
             }
         }
@@ -3493,10 +3500,10 @@
             if (playCount) totalExp += Math.floor(playCount) * 600;
             // 자산 보너스 (1000레알당 120exp)
             if (totalAssetsSum) totalExp += Math.floor(totalAssetsSum / 1000) * 120;
-            // 레벨 계산 — divisor 1.8 (약 30판에 Lv.150 도달, 최대 999)
-            var level = Math.min(999, Math.floor(Math.pow(totalExp, 0.52) / 1.8) + 1);
-            var nextLvExp = level < 999 ? Math.round(Math.pow((level) * 1.8, 1/0.52)) : Infinity;
-            var prevLvExp = level > 1 ? Math.round(Math.pow((level-1)*1.8, 1/0.52)) : 0;
+            // 레벨 계산 — divisor 2.0 (약 40판에 Lv.150 도달, 최대 999)
+            var level = Math.min(999, Math.floor(Math.pow(totalExp, 0.52) / 2.0) + 1);
+            var nextLvExp = level < 999 ? Math.round(Math.pow((level) * 2.0, 1/0.52)) : Infinity;
+            var prevLvExp = level > 1 ? Math.round(Math.pow((level-1)*2.0, 1/0.52)) : 0;
             var pct = (level >= 999) ? 100 : (nextLvExp > prevLvExp ? Math.min(100, Math.round((totalExp - prevLvExp)/(nextLvExp - prevLvExp)*100)) : 100);
             return { level: level, exp: totalExp, pct: pct, nextLvExp: nextLvExp };
         }
@@ -3731,6 +3738,8 @@
             keyUsedThisRound = false;
             // 활성 효과 완전 초기화 (다른 아이디로 접속해도 초기화)
             activeKeyEffect = null;
+            drawnEffects = [];
+            renderDrawnEffects();
             const banner = document.getElementById('active-key-effect-banner');
             if (banner) banner.style.display = 'none';
 
@@ -3822,9 +3831,10 @@
         // 🗝️ 황금 열쇠 시스템
         // ══════════════════════════════════════
         let goldenKeys = 0;
-        let grantedKeyLevels = new Set(); // 더 이상 미사용 (하위호환 보존용)
-        let activeKeyEffect = null; // 현재 활성 효과 { type, label, data }
-        let keyUsedThisRound = false; // 라운드당 1회 사용 제한
+        let grantedKeyLevels = new Set();
+        let activeKeyEffect = null; // 단일 활성 효과 (하위호환)
+        let drawnEffects = [];      // 뽑아둔 효과 목록 (버튼으로 표시)
+        let keyUsedThisRound = false; // 더 이상 사용 안 함 (제한 제거)
 
         // 매판 지급 기준표 [최소레벨, 지급 수] (높은 레벨일수록 적용)
         const KEY_LEVEL_GRANTS = [
@@ -3853,16 +3863,15 @@
             return null;
         }
 
-        // 효과 정의
         const KEY_EFFECTS = [
-            { type:'market_fix',    label:'시장 동결',       desc:'다음 라운드 모든 선박의 글로벌 노이즈가 0으로 고정됩니다.' },
-            { type:'manipulation',  label:'시세 조작',       desc:'원하는 선박 1척의 성공률을 +20 부스트합니다. 선박을 클릭해 선택하세요.' },
-            { type:'prophecy',      label:'예언서',          desc:'다음 정규 라운드에 등장할 상황 4가지 중 1개를 직접 선택합니다. 상황 카드를 클릭해 선택하세요. 돌발 상황이 끼어들어도 예언서 효과는 보존되어 다음 정규 라운드에 반드시 적용됩니다.' },
-            { type:'big_gain',      label:'뜻밖의 개이득',   desc:'자본 1,000 레알을 즉시 획득합니다.' },
-            { type:'small_gain',    label:'소확행',          desc:'자본 500 레알을 즉시 획득합니다.' },
-            { type:'immunity',      label:'부정 조사 면제',  desc:'다음 라운드 비윤리 선박 투자에 도덕지수 패널티가 없습니다.' },
-            { type:'insurance',     label:'보험',            desc:'다음 항해에서 투자한 선박 중 1척이 실패해도 투자금의 50%를 돌려받습니다.' },
-            { type:'disaster',      label:'대형 사고',       desc:'⚠️ 불운! 선박 1척이 강제로 항해 실패합니다.' },
+            { type:'market_fix',   label:'시장 동결',      desc:'다음 라운드 모든 선박의 글로벌 노이즈가 0으로 고정됩니다.' },
+            { type:'manipulation', label:'시세 조작',      desc:'원하는 선박 1척의 성공률을 +20 부스트합니다. 선박 카드를 클릭해 선택하세요.' },
+            { type:'prophecy',     label:'예언서',         desc:'다음 정규 라운드 상황을 직접 선택합니다. 예측 카드를 클릭해 선택하세요.' },
+            { type:'big_gain',     label:'뜻밖의 개이득',  desc:'자본 1,000 레알을 즉시 획득합니다.' },
+            { type:'small_gain',   label:'소확행',         desc:'자본 500 레알을 즉시 획득합니다.' },
+            { type:'immunity',     label:'부정 조사 면제', desc:'다음 라운드 비윤리 선박 투자에 도덕지수 패널티가 없습니다.' },
+            { type:'insurance',    label:'보험',           desc:'투자했다가 침몰한 선박 1척에 사용하면 투자금의 50%를 돌려받습니다. 침몰 선박 카드를 클릭해 사용하세요.' },
+            { type:'disaster',     label:'대형 사고',      desc:'⚠️ 불운! 뽑는 즉시 투자 중인 선박 1척이 강제 침몰합니다.' },
         ];
 
         // 로컬 스토리지에서 부여된 레벨 로드 (하위호환용)
@@ -3979,18 +3988,14 @@
                 : `<b style="color:#f59e0b">최고 등급! 매판 ${perPlay}개 지급 중</b>`;
             const grantTable = [...KEY_LEVEL_GRANTS].slice().reverse()
                 .map(([l,c]) => `<span style="font-size:10px;color:${lv>=l?'#f59e0b':'#5c3d11'};font-weight:${lv>=l?'900':'400'};">Lv.${l}→${c}개</span>`).join(' &nbsp;');
-            const usedInfo = keyUsedThisRound
-                ? `<div style="margin-top:6px;font-size:10px;color:#f87171;font-weight:700;">⚠️ 이번 라운드 이미 사용함 (라운드당 1회 제한)</div>`
-                : '';
             const effectList = KEY_EFFECTS.map(e => `• <b>${e.label}</b>: ${e.desc}`).join('<br>');
             tip.innerHTML = `<div style="margin-bottom:6px;font-weight:900;color:#c8960c;">🗝️ 황금 열쇠 (보유: ${goldenKeys}개)</div>`
                 + `<div style="margin-bottom:4px;font-size:10px;">${perPlayInfo}</div>`
                 + `<div style="margin-bottom:8px;font-size:10px;color:#7a5c2e;">${nextInfo}</div>`
                 + `<div style="font-size:10px;color:#c8960c;font-weight:700;margin-bottom:4px;">📊 매판 지급 기준</div>`
-                + `<div style="margin-bottom:4px;">${grantTable}</div>`
-                + usedInfo
+                + `<div style="margin-bottom:8px;">${grantTable}</div>`
                 + `<div style="border-top:1px solid rgba(200,150,12,0.2);margin:8px 0;"></div>`
-                + `<div style="font-size:10px;color:#c8960c;font-weight:700;margin-bottom:4px;">🎲 효과 목록 (각 12.5%)</div>`
+                + `<div style="font-size:10px;color:#c8960c;font-weight:700;margin-bottom:4px;">🎲 효과 목록 (각 12.5%) — 뽑기 후 버튼으로 보관, 원하는 타이밍에 사용</div>`
                 + `<div style="font-size:10px;color:#9e7a4a;line-height:1.7;">${effectList}</div>`;
 
             // 위치 계산: 버튼 기준, 화면 밖 안 나가게
@@ -4017,17 +4022,162 @@
             if (tip) tip.style.display = 'none';
         }
 
+        // 뽑힌 효과 UI 갱신
+        function renderDrawnEffects() {
+            const area = document.getElementById('drawn-effects-area');
+            if (!area) return;
+            if (drawnEffects.length === 0) {
+                area.style.display = 'none';
+                return;
+            }
+            area.style.display = 'flex';
+            area.innerHTML = drawnEffects.map((eff, idx) => {
+                const usedMark = eff._used ? 'opacity:0.4;text-decoration:line-through;' : '';
+                const extra = eff.type === 'prophecy' && eff.forcedSitIndex !== undefined
+                    ? ` ✅` : '';
+                return `<div style="position:relative;display:inline-block;">
+                    <button
+                        onclick="activateDrawnEffect(${idx})"
+                        onmouseenter="showDrawnEffectTooltip(${idx}, this)"
+                        onmouseleave="hideDrawnEffectTooltip()"
+                        style="${usedMark}background:linear-gradient(135deg,rgba(200,150,12,0.30),rgba(245,158,11,0.15));
+                               border:1px solid rgba(200,150,12,0.65);border-radius:8px;
+                               padding:3px 9px;font-size:11px;font-weight:900;color:#f59e0b;
+                               cursor:${eff._used?'default':'pointer'};white-space:nowrap;">
+                        🗝️ ${eff.label}${extra}
+                    </button>
+                </div>`;
+            }).join('');
+            // 하위호환 - activeKeyEffect도 첫 번째 미사용 효과로 동기화
+            activeKeyEffect = drawnEffects.find(e => !e._used) || null;
+        }
+
+        // 뽑힌 효과 툴팁
+        let _drawnTipEl = null;
+        function showDrawnEffectTooltip(idx, btn) {
+            if (!_drawnTipEl) {
+                _drawnTipEl = document.createElement('div');
+                _drawnTipEl.style.cssText = 'position:fixed;z-index:9999;background:linear-gradient(135deg,rgba(28,14,2,0.98),rgba(44,26,4,0.97));border:1px solid rgba(200,150,12,0.5);border-radius:10px;padding:10px 13px;font-size:11px;color:#e8d5a3;max-width:260px;line-height:1.6;pointer-events:none;box-shadow:0 4px 20px rgba(0,0,0,0.7);';
+                document.body.appendChild(_drawnTipEl);
+            }
+            const eff = drawnEffects[idx];
+            if (!eff) return;
+            _drawnTipEl.innerHTML = `<b style="color:#f59e0b;">${eff.label}</b><br>${eff.desc}${eff._used ? '<br><span style="color:#f87171;">이미 사용됨</span>' : ''}`;
+            _drawnTipEl.style.display = 'block';
+            const rect = btn.getBoundingClientRect();
+            let left = rect.left;
+            let top = rect.bottom + 6;
+            if (left + 260 > window.innerWidth - 8) left = window.innerWidth - 268;
+            if (top + 100 > window.innerHeight) top = rect.top - 110;
+            _drawnTipEl.style.left = left + 'px';
+            _drawnTipEl.style.top = top + 'px';
+        }
+        function hideDrawnEffectTooltip() {
+            if (_drawnTipEl) _drawnTipEl.style.display = 'none';
+        }
+
+        // 뽑힌 효과 클릭 → 사용
+        function activateDrawnEffect(idx) {
+            const eff = drawnEffects[idx];
+            if (!eff || eff._used) return;
+
+            // 즉시 적용 효과들 (big_gain, small_gain) → 확인 없이 바로
+            if (eff.type === 'big_gain') {
+                if (!confirm('🗝️ [뜻밖의 개이득] 1,000 레알을 즉시 획득합니다. 사용하시겠습니까?')) return;
+                eff._used = true; cash += 1000; updateUI();
+                showCustomAlert('🗝️ [뜻밖의 개이득] 1,000 레알 획득!'); playSound('golden_key');
+                renderDrawnEffects(); return;
+            }
+            if (eff.type === 'small_gain') {
+                if (!confirm('🗝️ [소확행] 500 레알을 즉시 획득합니다. 사용하시겠습니까?')) return;
+                eff._used = true; cash += 500; updateUI();
+                showCustomAlert('🗝️ [소확행] 500 레알 획득!'); playSound('golden_key');
+                renderDrawnEffects(); return;
+            }
+            // 보험 — 침몰 선박 선택 모달
+            if (eff.type === 'insurance') {
+                const sunkOwned = Object.keys(portfolio).filter(id => portfolio[id] > 0 && ships[id]._ruined);
+                if (sunkOwned.length === 0) {
+                    showCustomAlert('🗝️ [보험] 투자했다가 침몰한 선박이 없습니다. 사용할 수 없습니다.');
+                    return;
+                }
+                const modal = document.createElement('div');
+                modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.78);display:flex;align-items:center;justify-content:center;padding:16px;';
+                modal.innerHTML = `<div style="background:linear-gradient(145deg,#1c0e02,#2c1a04);border:2px solid rgba(200,150,12,0.5);border-radius:16px;width:100%;max-width:360px;padding:24px;text-align:center;">
+                    <div style="font-size:28px;margin-bottom:6px;">🛡️</div>
+                    <div style="font-weight:900;font-size:14px;color:#f59e0b;margin-bottom:12px;">보험 적용 선박 선택</div>
+                    <div style="font-size:11px;color:#9e7a4a;margin-bottom:12px;">침몰한 선박 중 보험을 적용할 선박을 선택하세요. 투자금의 50%를 돌려받습니다.</div>
+                    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+                        ${sunkOwned.map(id => `
+                        <button onclick="applyInsurance('${id}', ${idx}, this)"
+                            style="background:rgba(200,150,12,0.15);border:1px solid rgba(200,150,12,0.4);border-radius:8px;padding:8px 12px;color:#e8d5a3;font-weight:700;font-size:12px;cursor:pointer;">
+                            💀 ${ships[id].name} (투자금 ${Math.round(portfolio[id]*avgCost[id]).toLocaleString()} 레알 → 50% 환급)
+                        </button>`).join('')}
+                    </div>
+                    <button onclick="this.closest('[style*=fixed]').remove()" style="background:rgba(60,50,40,0.8);color:#9e7a4a;border:1px solid rgba(100,80,60,0.4);border-radius:8px;padding:8px 20px;font-weight:700;font-size:12px;cursor:pointer;">취소</button>
+                </div>`;
+                document.body.appendChild(modal);
+                return;
+            }
+            // 나머지 효과들 — 확인 모달
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.innerHTML = `<div style="background:linear-gradient(145deg,#1c0e02,#2c1a04);border:2px solid rgba(200,150,12,0.5);border-radius:16px;width:100%;max-width:360px;padding:24px;text-align:center;">
+                <div style="font-size:28px;margin-bottom:8px;">🗝️</div>
+                <div style="font-weight:900;font-size:15px;color:#f59e0b;margin-bottom:6px;">${eff.label} 사용</div>
+                <div style="font-size:12px;color:#9e7a4a;margin-bottom:20px;">${eff.desc}</div>
+                <div style="display:flex;gap:10px;justify-content:center;">
+                    <button onclick="confirmActivateEffect(${idx},this)" style="background:linear-gradient(135deg,#7a4a1a,#c8960c);color:#fff;border:none;border-radius:8px;padding:10px 24px;font-weight:900;font-size:13px;cursor:pointer;">사용하기</button>
+                    <button onclick="this.closest('[style*=fixed]').remove()" style="background:rgba(60,50,40,0.8);color:#9e7a4a;border:1px solid rgba(100,80,60,0.4);border-radius:8px;padding:10px 24px;font-weight:700;font-size:13px;cursor:pointer;">취소</button>
+                </div>
+            </div>`;
+            document.body.appendChild(modal);
+        }
+
+        function confirmActivateEffect(idx, btn) {
+            btn.closest('[style*=fixed]').remove();
+            const eff = drawnEffects[idx];
+            if (!eff || eff._used) return;
+            eff._used = true;
+            playSound('golden_key');
+            if (eff.type === 'market_fix') {
+                activeKeyEffect = eff;
+                showCustomAlert(`🗝️ [시장 동결] 다음 라운드 글로벌 노이즈가 0으로 고정됩니다.`);
+            } else if (eff.type === 'manipulation') {
+                activeKeyEffect = eff;
+                showCustomAlert(`🗝️ [시세 조작] 선박 카드를 클릭해 성공률 +20 부스트 선박을 선택하세요.`);
+            } else if (eff.type === 'prophecy') {
+                activeKeyEffect = eff;
+                showCustomAlert(`🗝️ [예언서] 예측 카드를 클릭해 다음 라운드에 발동될 상황을 선택하세요.`);
+            } else if (eff.type === 'immunity') {
+                activeKeyEffect = eff;
+                showCustomAlert(`🗝️ [부정 조사 면제] 다음 라운드 비윤리 선박 도덕지수 패널티 면제!`);
+            }
+            renderDrawnEffects();
+        }
+
+        function applyInsurance(shipId, idx, btn) {
+            btn.closest('[style*=fixed]').remove();
+            const eff = drawnEffects[idx];
+            if (!eff) return;
+            eff._used = true;
+            const refund = Math.round(portfolio[shipId] * avgCost[shipId] * 0.5);
+            cash += refund;
+            playSound('golden_key');
+            showCustomAlert(`🛡️ [보험] ${ships[shipId].name} 투자금의 50%인 ${refund.toLocaleString()} 레알 환급!`);
+            updateUI();
+            renderDrawnEffects();
+        }
+
+        // 하위호환 setActiveKeyEffect
         function setActiveKeyEffect(effect) {
             activeKeyEffect = effect;
-            const banner = document.getElementById('active-key-effect-banner');
-            const txt = document.getElementById('active-key-effect-text');
-            if (!banner || !txt) return;
             if (effect) {
-                txt.textContent = `[${effect.label}] ${effect.desc}`;
-                banner.style.display = 'flex';
-            } else {
-                banner.style.display = 'none';
+                // drawnEffects에 없으면 추가 (기존 코드 호환)
+                const exists = drawnEffects.some(e => e === effect);
+                if (!exists) drawnEffects.push(effect);
             }
+            renderDrawnEffects();
         }
 
         function useGoldenKey() {
@@ -4035,47 +4185,19 @@
                 showCustomAlert('🗝️ 보유한 황금 열쇠가 없습니다.');
                 return;
             }
-            if (keyUsedThisRound) {
-                showCustomAlert('⚠️ 이번 라운드에 이미 황금 열쇠를 사용했습니다. 다음 라운드에 사용하세요!');
-                return;
-            }
-
-            // 활성 효과가 있을 때 추가 사용 시 경고
-            if (activeKeyEffect) {
-                const confirmEl = document.createElement('div');
-                confirmEl.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.78);display:flex;align-items:center;justify-content:center;padding:16px;';
-                confirmEl.innerHTML = `
-                <div style="background:linear-gradient(145deg,#1c0e02,#2c1a04);border:2px solid rgba(239,68,68,0.55);border-radius:16px;width:100%;max-width:360px;padding:24px;text-align:center;">
-                    <div style="font-size:28px;margin-bottom:6px;">⚠️</div>
-                    <div style="font-weight:900;font-size:15px;color:#f87171;margin-bottom:8px;">활성 효과 덮어쓰기 경고</div>
-                    <div style="font-size:12px;color:#9e7a4a;margin-bottom:16px;">
-                        현재 <b style="color:#f59e0b">[${activeKeyEffect.label}]</b> 효과가 활성화 중입니다.<br>
-                        새 열쇠를 사용하면 <b style="color:#f87171">기존 효과가 즉시 삭제</b>됩니다.<br>계속하시겠습니까?
-                    </div>
-                    <div style="display:flex;gap:10px;justify-content:center;">
-                        <button onclick="(function(el){ el.closest('[style*=fixed]').remove(); activeKeyEffect=null; setActiveKeyEffect(null); openUseKeyModal(); })(this)"
-                            style="background:linear-gradient(135deg,#7f1d1d,#dc2626);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-weight:900;font-size:12px;cursor:pointer;">기존 효과 삭제 후 사용</button>
-                        <button onclick="this.closest('[style*=fixed]').remove()"
-                            style="background:rgba(60,50,40,0.8);color:#9e7a4a;border:1px solid rgba(100,80,60,0.4);border-radius:8px;padding:10px 20px;font-weight:700;font-size:12px;cursor:pointer;">취소</button>
-                    </div>
-                </div>`;
-                document.body.appendChild(confirmEl);
-                return;
-            }
             openUseKeyModal();
         }
 
         function openUseKeyModal() {
-            // 확인창
             const modal = document.createElement('div');
             modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:16px;';
             modal.innerHTML = `
             <div style="background:linear-gradient(145deg,#1c0e02,#2c1a04);border:2px solid rgba(200,150,12,0.5);border-radius:16px;width:100%;max-width:380px;padding:24px;text-align:center;">
                 <div style="font-size:32px;margin-bottom:8px;">🗝️</div>
-                <div style="font-weight:900;font-size:16px;color:#f59e0b;margin-bottom:6px;">황금 열쇠 사용</div>
-                <div style="font-size:12px;color:#9e7a4a;margin-bottom:20px;">랜덤 효과가 발동됩니다. 어떤 효과가 나올지 알 수 없습니다.<br><b style="color:#f59e0b">현재 보유: ${goldenKeys}개</b></div>
+                <div style="font-weight:900;font-size:16px;color:#f59e0b;margin-bottom:6px;">황금 열쇠 뽑기</div>
+                <div style="font-size:12px;color:#9e7a4a;margin-bottom:20px;">랜덤 효과를 뽑습니다. 대형 사고는 즉시 발동되며, 나머지는 헤더에 버튼으로 보관됩니다.<br><b style="color:#f59e0b">현재 보유: ${goldenKeys}개</b></div>
                 <div style="display:flex;gap:10px;justify-content:center;">
-                    <button onclick="confirmUseKey(this)" style="background:linear-gradient(135deg,#7a4a1a,#c8960c);color:#fff;border:none;border-radius:8px;padding:10px 24px;font-weight:900;font-size:13px;cursor:pointer;">사용하기</button>
+                    <button onclick="confirmUseKey(this)" style="background:linear-gradient(135deg,#7a4a1a,#c8960c);color:#fff;border:none;border-radius:8px;padding:10px 24px;font-weight:900;font-size:13px;cursor:pointer;">뽑기</button>
                     <button onclick="this.closest('[style*=fixed]').remove()" style="background:rgba(60,50,40,0.8);color:#9e7a4a;border:1px solid rgba(100,80,60,0.4);border-radius:8px;padding:10px 24px;font-weight:700;font-size:13px;cursor:pointer;">취소</button>
                 </div>
             </div>`;
@@ -4085,51 +4207,43 @@
         function confirmUseKey(btn) {
             btn.closest('[style*=fixed]').remove();
             goldenKeys--;
-            keyUsedThisRound = true;
             saveGoldenKeys();
             updateGoldenKeyUI();
 
-            // 랜덤 효과 결정 (각 12.5%)
             const effect = KEY_EFFECTS[Math.floor(Math.random() * KEY_EFFECTS.length)];
             playSound('golden_key');
 
-            // 즉시 효과
-            if (effect.type === 'big_gain') {
-                cash += 1000;
-                updateDashboard();
-                showCustomAlert(`🗝️ [${effect.label}] 1,000 레알 획득!`);
-            } else if (effect.type === 'small_gain') {
-                cash += 500;
-                updateDashboard();
-                showCustomAlert(`🗝️ [${effect.label}] 500 레알 획득!`);
-            } else if (effect.type === 'disaster') {
-                // 보유 선박 중 랜덤 1척 실패
+            // 대형 사고 — 즉시 발동
+            if (effect.type === 'disaster') {
                 const owned = Object.keys(portfolio).filter(id => portfolio[id] > 0 && !ships[id]._ruined);
                 if (owned.length > 0) {
                     const vic = owned[Math.floor(Math.random() * owned.length)];
                     ships[vic]._ruined = true;
                     ships[vic].currentProb = 0;
-                    updateAllShipCards();
-                    showCustomAlert(`🗝️ [${effect.label}] ⚠️ ${ships[vic].name}이(가) 강제 항해 실패 상태가 되었습니다!`);
+                    updateUI();
+                    showCustomAlert(`🗝️ [대형 사고] ⚠️ ${ships[vic].name}이(가) 즉시 침몰했습니다!`);
                 } else {
-                    showCustomAlert(`🗝️ [${effect.label}] 투자 중인 선박이 없어 효과가 발동되지 않았습니다.`);
+                    showCustomAlert(`🗝️ [대형 사고] 투자 중인 선박이 없어 효과가 발동되지 않았습니다.`);
                 }
-            } else if (effect.type === 'market_fix') {
-                setActiveKeyEffect({ ...effect, rounds: 1 });
-                showCustomAlert(`🗝️ [${effect.label}] 다음 라운드 글로벌 노이즈가 0으로 고정됩니다.`);
-            } else if (effect.type === 'immunity') {
-                setActiveKeyEffect({ ...effect });
-                showCustomAlert(`🗝️ [${effect.label}] 다음 라운드 비윤리 선박 도덕지수 패널티 면제!`);
-            } else if (effect.type === 'insurance') {
-                setActiveKeyEffect({ ...effect });
-                showCustomAlert(`🗝️ [${effect.label}] 다음 항해에서 1척 실패 시 50% 환급됩니다.`);
-            } else if (effect.type === 'manipulation') {
-                setActiveKeyEffect({ ...effect });
-                showCustomAlert(`🗝️ [${effect.label}] 선박 카드를 클릭해 성공률 +20 부스트 선박을 선택하세요.`);
-            } else if (effect.type === 'prophecy') {
-                setActiveKeyEffect({ ...effect });
-                showCustomAlert(`🗝️ [${effect.label}] 상황 카드를 클릭해 다음 라운드에 발동될 상황을 1개 선택하세요.`);
+                return;
             }
+            // 즉시 현금 효과 — 뽑자마자 바로 적용
+            if (effect.type === 'big_gain') {
+                cash += 1000; updateUI();
+                showCustomAlert(`🗝️ [뜻밖의 개이득] 1,000 레알 즉시 획득!`);
+                return;
+            }
+            if (effect.type === 'small_gain') {
+                cash += 500; updateUI();
+                showCustomAlert(`🗝️ [소확행] 500 레알 즉시 획득!`);
+                return;
+            }
+
+            // 나머지 효과 — drawnEffects에 추가하고 버튼으로 보관
+            const newEff = { ...effect, _used: false };
+            drawnEffects.push(newEff);
+            renderDrawnEffects();
+            showCustomAlert(`🗝️ [${effect.label}] 효과를 뽑았습니다! 헤더의 버튼을 클릭해 원하는 타이밍에 사용하세요.`);
         }
 
         function applyManipulation(shipId, btn) {
