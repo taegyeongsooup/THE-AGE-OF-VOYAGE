@@ -787,7 +787,7 @@
             </div>
             
             <h2 class="header-title text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text mb-2 tracking-tight" style="background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                대항해 시대: 운명을 건 항해(3.30v)
+                대항해 시대: 운명을 건 항해(3.31v)
             </h2>
             <p class="text-slate-300 max-w-2xl text-sm sm:text-base mb-3 leading-relaxed px-4">
                 16세기, 유럽의 야심 찬 선장들이 미지의 신대륙과 인도를 향해 닻을 올립니다.<br>
@@ -1032,7 +1032,7 @@
                                 </colgroup>
                                 <thead>
                                     <tr style="background:rgba(44,26,4,0.12);color:#5c3d11;font-weight:800;">
-                                        <th style="padding:3px 8px;text-align:left;">선단명</th>
+                                        <th style="padding:3px 8px;text-align:center;">선단명</th>
                                         <th style="padding:3px 4px;text-align:center;">상품</th>
                                         <th style="padding:3px 4px;text-align:center;">주수</th>
                                         <th style="padding:3px 4px;text-align:center;">평가금</th>
@@ -2041,6 +2041,8 @@
             // syncPlayerDataFromSheet에서 이미 goldenKeys 동기화 완료
             // loadGoldenKeys()는 로컬만 읽어 덮어쓰므로 호출 안 함
             loadGrantedKeyLevels();
+            // 매판 황금열쇠 지급 (포기 후 재시작 포함 — 항상 게임 시작 시 지급)
+            checkAndGrantKeys(playerLevel);
             updateGoldenKeyUI();
 
             currentRound = 0;
@@ -2454,9 +2456,12 @@
             window._immunityRoundActive = false;
             // 라운드 전환 시 이번 라운드 도덕 감점 추적 초기화 (확정 — 팔아도 복원 불가)
             _roundMoralDeduct = { E: 0, B: 0 };
-            // 라운드 전환 시 예언서 외 일회성 효과들 정리
-            drawnEffects = drawnEffects.filter(e => !e._used || e.type === 'prophecy');
-            activeKeyEffect = drawnEffects.find(e => !e._used) || null;
+            // 라운드 전환 시 예언서·시장동결 외 일회성 소모 효과 정리
+            drawnEffects = drawnEffects.filter(e => !e._used || e.type === 'prophecy' || e.type === 'market_fix');
+            // activeKeyEffect: market_fix/prophecy는 라운드 넘어도 유지, 나머지만 재탐색
+            if (activeKeyEffect && activeKeyEffect.type !== 'market_fix' && activeKeyEffect.type !== 'prophecy') {
+                activeKeyEffect = drawnEffects.find(e => !e._used) || null;
+            }
 
             // 돌발 상황 처리 중인 경우 (돌발 투자 화면 -> 다음 라운드)
             if (window._pendingEventRound !== undefined && window._pendingEventRound !== null) {
@@ -2721,7 +2726,7 @@
                 ? (SITUATION_SHIP_PROTECTION[sitIndex] || {})
                 : {};
 
-            // 시장 동결 효과 여부
+            // 시장 동결 효과 여부 (drawnEffects 기반으로 통일)
             const frozen = drawnEffects.some(e => e.type === 'market_fix' && e._used && !e._expired)
                 || (activeKeyEffect && activeKeyEffect.type === 'market_fix');
 
@@ -2804,9 +2809,11 @@
                 : {};
 
             // 글로벌 랜덤 변동 — 선택과 관련된 선박은 방향 고정
+            const isFrozenForEvent = drawnEffects.some(e => e.type === 'market_fix' && e._used && !e._expired)
+                || (activeKeyEffect && activeKeyEffect.type === 'market_fix');
             for (const shipId in ships) {
                 if (ships[shipId]._ruined) continue;
-                if (activeKeyEffect && activeKeyEffect.type === 'market_fix') continue;
+                if (isFrozenForEvent) continue;
 
                 let probDelta = Math.floor(Math.random() * 14) - 6;  // -6 ~ +7
                 if (protection[shipId] === 'pos') probDelta =  Math.abs(probDelta) + 1;  // 반드시 +
@@ -4479,7 +4486,7 @@
 
                 body.insertAdjacentHTML('beforeend', `
                     <tr style="border-top:1px solid rgba(92,61,17,0.15);">
-                        <td style="padding:3px 8px;font-weight:700;color:#2c1a04;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"${isUneth}>${s.name.replace(' 호','')}</td>
+                        <td style="padding:3px 8px;font-weight:700;color:#2c1a04;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:center;"${isUneth}>${s.name.replace(' 호','')}</td>
                         <td style="padding:3px 4px;text-align:center;color:#7a5c2e;font-size:9px;">${s.cargo}</td>
                         <td style="padding:3px 4px;text-align:center;color:#2c1a04;font-weight:700;font-size:10px;">${portfolio[shipId]}주</td>
                         <td style="padding:3px 4px;text-align:center;color:#2c1a04;font-weight:700;font-size:10px;">${evalVal.toLocaleString()}</td>
@@ -4758,6 +4765,12 @@
             eff._used = true;
             playSound('golden_key');
             if (eff.type === 'manipulation') {
+                // 0라운드(준비단계)에서는 시세 50 고정이라 효과 없음 → 사용 차단
+                if (currentRound === 0) {
+                    eff._used = false; // 사용 취소
+                    showCustomAlert('⚠️ [시세 조작] 출항 준비 단계에서는 모든 주가가 50레알 고정이라 사용할 수 없습니다. 1라운드 이후에 사용하세요!');
+                    return;
+                }
                 // 선박 선택 모달 띄우기
                 const modal2 = document.createElement('div');
                 modal2.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.78);display:flex;align-items:center;justify-content:center;padding:16px;';
@@ -4863,17 +4876,26 @@
             const effect = KEY_EFFECTS[Math.floor(Math.random() * KEY_EFFECTS.length)];
             playSound('golden_key');
 
-            // 대형 사고 — 즉시 발동
+            // 대형 사고 — 즉시 발동 (투자 여부 무관, 전 선박 중 랜덤 1~2개 각 50% 확률 침몰)
             if (effect.type === 'disaster') {
-                const owned = Object.keys(portfolio).filter(id => portfolio[id] > 0 && !ships[id]._ruined);
-                if (owned.length > 0) {
-                    const vic = owned[Math.floor(Math.random() * owned.length)];
-                    ships[vic]._ruined = true;
-                    ships[vic].currentProb = 0;
-                    updateUI();
-                    showCustomAlert(`🗝️ [대형 사고] ⚠️ ${ships[vic].name}이(가) 즉시 침몰했습니다!`);
+                const candidates = Object.keys(ships).filter(id => !ships[id]._ruined);
+                // 1~2개 랜덤 선택
+                const shuffled = candidates.sort(() => Math.random() - 0.5);
+                const count = Math.random() < 0.5 ? 1 : 2;
+                const targets = shuffled.slice(0, count);
+                const sunk = [];
+                for (const id of targets) {
+                    if (Math.random() < 0.5) { // 각각 50% 확률
+                        ships[id]._ruined = true;
+                        ships[id].currentProb = 0;
+                        sunk.push(ships[id].name);
+                    }
+                }
+                updateUI();
+                if (sunk.length > 0) {
+                    showCustomAlert(`🗝️ [대형 사고] ⚠️ ${sunk.join(', ')}이(가) 즉시 침몰했습니다!`);
                 } else {
-                    showCustomAlert(`🗝️ [대형 사고] 투자 중인 선박이 없어 효과가 발동되지 않았습니다.`);
+                    showCustomAlert(`🗝️ [대형 사고] ⚠️ 사고가 발생했으나 기적적으로 모든 선박이 생존했습니다!`);
                 }
                 return;
             }
@@ -4984,11 +5006,11 @@
                 <div style="font-weight:900;font-size:16px;color:#f87171;margin-bottom:8px;">항해 포기</div>
                 <div style="font-size:12px;color:#9e7a4a;margin-bottom:6px;line-height:1.7;">
                     게임을 포기하면 이번 항해 기록은 저장되지 않으며<br>
-                    <b style="color:#f87171;">누적 자산에서 500 레알이 차감</b>됩니다.<br>
+                    <b style="color:#f87171;">누적 자산에서 1,000 레알이 차감</b>됩니다.<br>
                     <span style="font-size:10px;opacity:0.7;">(황금열쇠 효과 재시기를 방지하기 위한 패널티)</span>
                 </div>
                 <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;">
-                    <button onclick="confirmQuitGame(this)" style="background:linear-gradient(135deg,#7f1d1d,#dc2626);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-weight:900;font-size:13px;cursor:pointer;">포기하기 (-500레알)</button>
+                    <button onclick="confirmQuitGame(this)" style="background:linear-gradient(135deg,#7f1d1d,#dc2626);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-weight:900;font-size:13px;cursor:pointer;">포기하기 (-1,000레알)</button>
                     <button onclick="this.closest('[style*=fixed]').remove()" style="background:rgba(60,50,40,0.8);color:#9e7a4a;border:1px solid rgba(100,80,60,0.4);border-radius:8px;padding:10px 20px;font-weight:700;font-size:13px;cursor:pointer;">계속하기</button>
                 </div>
             </div>`;
@@ -5012,7 +5034,7 @@
                             playerNumber: playerNumber,
                             playerName:   playerName,
                             password:     pw,
-                            finalAssets:  -500,   // 패널티: 누적자산에서 차감
+                            finalAssets:  -1000,   // 패널티: 누적자산에서 차감
                             grade:        'F',
                             titles:       ['항해 포기']
                         })
