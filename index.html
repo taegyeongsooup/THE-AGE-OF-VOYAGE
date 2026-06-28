@@ -860,7 +860,7 @@
             </div>
             
             <h2 class="header-title text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text mb-2 tracking-tight" style="background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                대항해 시대: 운명을 건 항해(3.40v)
+                대항해 시대: 운명을 건 항해(3.41v)
             </h2>
             <p class="text-slate-300 max-w-2xl text-sm sm:text-base mb-3 leading-relaxed px-4">
                 16세기, 유럽의 야심 찬 선장들이 미지의 신대륙과 인도를 향해 닻을 올립니다.<br>
@@ -1304,6 +1304,8 @@
         let maxSingleShipRatio = 0; // 한 선단에 몰린 최대 자산 비중 기록 (칭호 판정용)
         let buyActionCount = 0; // 매수 클릭 총 횟수 (투자 성향 판정용)
         let sellActionCount = 0; // 매도 클릭 총 횟수
+        let firstInvestRound = null; // 최초로 매수 행위를 한 라운드 (null = 아직 투자 안 함, "침묵" 칭호 판정용)
+        let hasEverHeldEthicalShipAtRoundEnd = false; // 라운드 종료(전환) 시점에 비도덕(E)·해적(B) 외 선박을 보유한 적이 있는지 (한번 true면 계속 true)
         
         // Investment shares tracker
         let portfolio = {
@@ -1537,8 +1539,8 @@
                 }
             },
             {
-                title: "안데스 산맥 은광 침수 사태 발생",
-                desc: "유독 차가운 여름 폭우로 채굴 기지 깊숙한 터널 배수 시스템이 터져 채광 작업이 3달간 마비되었습니다.",
+                title: "안데스 산맥 은광의 침수 사태 발생",
+                desc: "여름 폭우로 은광 채굴 기지 깊숙한 터널에서 배수 시스템이 붕괴되었습니다. 채광 작업이 3달간 마비되었습니다.",
                 impact: (s) => {
                     s.C.currentProb -= 15; s.C.currentMult -= 0.2;
                 }
@@ -1548,6 +1550,75 @@
                 desc: "지중해 도시 인구 밀도가 이전 수준을 회복하며 전통적인 이탈리아 고급 모직 직물의 수요가 폭등합니다.",
                 impact: (s) => {
                     s.H.currentMult += 0.4; s.H.currentProb += 10;
+                }
+            },
+            {
+                title: "크라켄의 분노",
+                desc: "크라켄이 바다를 항해하는 선박을 잡아먹는다는 소문이 파다합니다. 소문일 뿐이지만, 모든 선박에 대한 기대감을 저하시킵니다.",
+                impact: (s) => {
+                    for (const id in s) { s[id].currentProb -= 13; }
+                }
+            },
+            {
+                title: "과거로의 회귀",
+                desc: "실크로드를 통한 교역이 다시 각광받으며, 지중해 무역이 크게 번영하고 다른 항로에 대한 불신이 전체적으로 커집니다.",
+                impact: (s) => {
+                    s.H.currentProb += 25; s.H.currentMult += 0.8;
+                    for (const id in s) { if (id !== 'H') s[id].currentProb -= 10; }
+                }
+            },
+            {
+                title: "금의 환향",
+                desc: "아시아 방면으로 향했던 배들이 차례로 입항하고 있습니다. 동방 무역에 대한 기대감이 커집니다.",
+                impact: (s) => {
+                    s.A.currentProb += 15; s.A.currentMult += 0.5; // 후추
+                    s.B.currentProb += 15; s.B.currentMult += 0.5; // 정향
+                    s.F.currentProb += 15; s.F.currentMult += 0.5; // 비단
+                }
+            },
+            {
+                title: "악행의 대가는 자업자득",
+                desc: "비윤리적 무역을 일삼는 자들을 무력으로 단죄하는 명령이 집행됩니다. 비윤리적 선박 하나가 침몰합니다.",
+                impact: (s) => {
+                    // 해적선(B)·노예선(E) 중 하나는 즉시 침몰, 하나는 큰 악재 (랜덤 배정)
+                    // 단, 둘 중 하나가 이미 침몰해 있으면 남은 하나도 그대로 침몰시킴
+                    const targets = ['E', 'B'].filter(id => !s[id]._ruined);
+                    if (targets.length === 0) return;
+                    if (targets.length === 1) {
+                        s[targets[0]]._ruined = true;
+                        s[targets[0]].currentProb = 0;
+                        return;
+                    }
+                    const shuffled = targets.slice().sort(() => Math.random() - 0.5);
+                    const sunkId = shuffled[0], hitId = shuffled[1];
+                    s[sunkId]._ruined = true;
+                    s[sunkId].currentProb = 0;
+                    s[hitId].currentProb -= 30; s[hitId].currentMult -= 1.0;
+                }
+            },
+            {
+                title: "명나라의 일조편법 시행",
+                desc: "명나라가 복잡했던 여러 세금을 통합하여 은으로 납부하도록 지시했습니다. 은 수요가 커지고 가격이 상승합니다.",
+                impact: (s) => {
+                    s.C.currentProb += 25; s.C.currentMult += 1.0; // 은
+                }
+            },
+            {
+                title: "다시 들려 오는 황금의 나라에 대한 풍문",
+                desc: "황금의 나라에 대한 소문이 다시 돌며, 금 수요가 폭증했습니다. 반면, 은에 대한 수요는 크게 감소합니다.",
+                impact: (s) => {
+                    s.C.currentProb -= 25; s.C.currentMult -= 1.0; // 은
+                }
+            },
+            {
+                title: "예기치 못한 악몽",
+                desc: "하나의 선박이 의문의 사고를 당해 침몰합니다. 정말 예기치 못한 일입니다.",
+                impact: (s) => {
+                    const candidates = Object.keys(s).filter(id => !s[id]._ruined);
+                    if (candidates.length === 0) return;
+                    const targetId = candidates[Math.floor(Math.random() * candidates.length)];
+                    s[targetId]._ruined = true;
+                    s[targetId].currentProb = 0;
                 }
             }
         ];
@@ -2233,10 +2304,26 @@
         // STOCK TRANSACTION CONTROL (1주 단위 매수/매도, 평단가 추적)
         // ----------------------------------------------------
 
-        // 이번 라운드(국면)에서 각 선박별로 감점된 도덕 점수 및 그 감점이 걸린 주수 추적
-        // 라운드/국면 넘으면 초기화 → 그 이전에 사둔 주식은 팔아도 복원 안 됨
-        let _roundMoralDeduct = { E: 0, B: 0 }; // E: 노예선, B: 해적선 (이번 국면 감점 총액)
-        let _roundMoralDeductQty = { E: 0, B: 0 }; // 이번 국면에 감점이 걸린 보유 주수
+        // 도덕 감점은 "이번 라운드 시작 시점 보유량 대비 순증가분"에만 부과한다.
+        // 같은 라운드 안에서 1주 팔고 다시 1주 사는 식의 의사결정 변경은 순증가가 0이므로 감점되지 않음.
+        let _roundStartPortfolio = { E: 0, B: 0 }; // 이번 라운드(국면) 시작 시점의 보유 주수 스냅샷
+        let _roundAppliedDeduct = { E: 0, B: 0 }; // 이번 라운드 동안 실제로 부과된 감점 총액 (재계산 시 비교용)
+
+        // 보유량 변동(매수/매도) 후 호출 — 순증가분 기준으로 감점을 재산정하고 차액만 ethicalScore에 반영
+        function recalcRoundMoralDeduct(shipId) {
+            const ship = ships[shipId];
+            if (!ship || (!ship.isUnethical && !ship.isPirate)) return;
+            const unitDeduct = ship.isUnethical ? 1 : 0.25;
+            const startQty = _roundStartPortfolio[shipId] || 0;
+            const netIncrease = Math.max(0, (portfolio[shipId] || 0) - startQty);
+            const targetDeduct = netIncrease * unitDeduct;
+            const already = _roundAppliedDeduct[shipId] || 0;
+            const delta = targetDeduct - already;
+            if (delta !== 0) {
+                ethicalScore -= delta;
+                _roundAppliedDeduct[shipId] = targetDeduct;
+            }
+        }
 
         function buyShares(shipId, qty) {
             // 도덕 제재로 매수 불가 선박 체크
@@ -2256,26 +2343,10 @@
             qty = Math.min(qty, maxQty);
             if (qty <= 0) return;
 
-            const isImmune = window._immunityRoundActive === true;
+            // 최초 매수 라운드 기록 ("침묵" 칭호 등 판정용)
+            if (firstInvestRound === null) firstInvestRound = currentRound;
 
-            if (ships[shipId].isUnethical) {
-                if (!isImmune) {
-                    const deduct = qty * 1; // 1주당 -1점
-                    ethicalScore -= deduct;
-                    _roundMoralDeduct[shipId] = (_roundMoralDeduct[shipId] || 0) + deduct;
-                    _roundMoralDeductQty[shipId] = (_roundMoralDeductQty[shipId] || 0) + qty;
-                    totalInvestedInUnethical += currentPrice * qty;
-                    hasUnethicalInvestedNow = true;
-                }
-            }
-            if (ships[shipId].isPirate) {
-                if (!isImmune) {
-                    const deduct = qty * 0.25; // 1주당 -0.25점
-                    ethicalScore -= deduct;
-                    _roundMoralDeduct[shipId] = (_roundMoralDeduct[shipId] || 0) + deduct;
-                    _roundMoralDeductQty[shipId] = (_roundMoralDeductQty[shipId] || 0) + qty;
-                }
-            }
+            const isImmune = window._immunityRoundActive === true;
 
             // qty주 매수 처리
             cash -= currentPrice * qty;
@@ -2283,6 +2354,20 @@
             portfolio[shipId] += qty;
             avgCost[shipId] = totalCostBasis[shipId] / portfolio[shipId];
             buyActionCount += qty;
+
+            if (ships[shipId].isUnethical) {
+                totalInvestedInUnethical += currentPrice * qty;
+                hasUnethicalInvestedNow = true;
+            }
+
+            if (ships[shipId].isUnethical || ships[shipId].isPirate) {
+                if (isImmune) {
+                    // 면제 효과 적용 중 매수분은 베이스라인에 편입시켜 영구 면제 (라운드 내 감점 대상에서 제외)
+                    _roundStartPortfolio[shipId] = (_roundStartPortfolio[shipId] || 0) + qty;
+                } else {
+                    recalcRoundMoralDeduct(shipId);
+                }
+            }
 
             const totalWealth = calculateTotalAssets();
             const shipAssetVal = portfolio[shipId] * currentPrice;
@@ -2307,20 +2392,6 @@
             const currentPrice = calculateSharePrice(ships[shipId]);
             const costPerShare = avgCost[shipId];
 
-            // 이번 국면(라운드/돌발막간극)에서 신규 매수해 감점이 걸린 주수만큼만 비례 복원
-            // 그 이전부터 보유하던 주식은 팔아도 회복되지 않음
-            if (ships[shipId].isUnethical || ships[shipId].isPirate) {
-                const trackedQty = Math.min(_roundMoralDeductQty[shipId] || 0, portfolio[shipId]);
-                const roundDeduct = _roundMoralDeduct[shipId] || 0;
-                if (trackedQty > 0 && roundDeduct > 0) {
-                    const restoreQty = Math.min(qty, trackedQty);
-                    const restore = roundDeduct * (restoreQty / trackedQty);
-                    ethicalScore += restore;
-                    _roundMoralDeduct[shipId] = roundDeduct - restore;
-                    _roundMoralDeductQty[shipId] = trackedQty - restoreQty;
-                }
-            }
-
             portfolio[shipId] -= qty;
             totalCostBasis[shipId] -= costPerShare * qty;
             cash += currentPrice * qty;
@@ -2330,11 +2401,14 @@
                 portfolio[shipId] = 0;
                 totalCostBasis[shipId] = 0;
                 avgCost[shipId] = 0;
-                _roundMoralDeduct[shipId] = 0; // 전량 매도 → 추적 초기화
-                _roundMoralDeductQty[shipId] = 0;
                 if (ships[shipId].isUnethical) {
                     hasUnethicalInvestedNow = false;
                 }
+            }
+
+            // 매도 후 순증가분(이번 라운드 시작 대비) 기준으로 감점 재계산 — 줄어든 만큼 자동 환원
+            if (ships[shipId].isUnethical || ships[shipId].isPirate) {
+                recalcRoundMoralDeduct(shipId);
             }
 
             playSound('sell');
@@ -2347,15 +2421,6 @@
             const totalSellAmount = portfolio[shipId] * currentPrice;
             cash += totalSellAmount;
 
-            // 이번 국면(라운드/돌발막간극)에서 신규 매수해 걸린 감점분 전액 복원
-            // 그 이전부터 보유하던 분량의 감점은 이미 추적이 끊겨 있어 복원되지 않음
-            const roundDeduct = _roundMoralDeduct[shipId] || 0;
-            if (roundDeduct > 0) {
-                ethicalScore += roundDeduct;
-                _roundMoralDeduct[shipId] = 0;
-                _roundMoralDeductQty[shipId] = 0;
-            }
-
             portfolio[shipId] = 0;
             totalCostBasis[shipId] = 0;
             avgCost[shipId] = 0;
@@ -2363,6 +2428,11 @@
 
             if (ships[shipId].isUnethical) {
                 hasUnethicalInvestedNow = false;
+            }
+
+            // 전량 매도 → 순증가 0이 되어 이번 라운드 감점분 자동 환원
+            if (ships[shipId].isUnethical || ships[shipId].isPirate) {
+                recalcRoundMoralDeduct(shipId);
             }
 
             playSound('sell');
@@ -2375,16 +2445,13 @@
                 if (portfolio[shipId] > 0) {
                     const currentPrice = calculateSharePrice(ships[shipId]);
                     totalSold += portfolio[shipId] * currentPrice;
-                    // 이번 국면에서 신규 매수해 걸린 감점분만 복원
-                    const roundDeduct = _roundMoralDeduct[shipId] || 0;
-                    if (roundDeduct > 0) {
-                        ethicalScore += roundDeduct;
-                        _roundMoralDeduct[shipId] = 0;
-                        _roundMoralDeductQty[shipId] = 0;
-                    }
                     portfolio[shipId] = 0;
                     totalCostBasis[shipId] = 0;
                     avgCost[shipId] = 0;
+                    // 전량 매도 → 순증가 0이 되어 이번 라운드 감점분 자동 환원
+                    if (ships[shipId].isUnethical || ships[shipId].isPirate) {
+                        recalcRoundMoralDeduct(shipId);
+                    }
                 }
             }
             if (totalSold > 0) {
@@ -2541,11 +2608,13 @@
             playSound('click');
             // 라운드 전환 시 면제 플래그 초기화 (새 라운드에선 새 면제 효과 필요)
             window._immunityRoundActive = false;
-            // 라운드 전환 시 이번 라운드 도덕 감점 추적 초기화 (확정 — 팔아도 복원 불가)
-            _roundMoralDeduct = { E: 0, B: 0 };
-            _roundMoralDeductQty = { E: 0, B: 0 };
-            // 라운드 전환 시 예언서·시장동결 외 일회성 소모 효과 정리
-            drawnEffects = drawnEffects.filter(e => !e._used || e.type === 'prophecy' || e.type === 'market_fix');
+            // 라운드 전환 시 도덕 감점 기준점 갱신 — 이번 라운드 "시작 시점 보유량"으로 새로 스냅샷
+            // (이전 라운드에서 부과된 감점은 이미 확정되어 그대로 유지, 새 라운드의 순증가만 새로 추적)
+            _roundStartPortfolio = { E: portfolio.E || 0, B: portfolio.B || 0 };
+            _roundAppliedDeduct = { E: 0, B: 0 };
+            // 라운드 전환 시 사용된 효과는 예외 없이 모두 목록에서 정리 (다음 라운드에 새로 뽑기 가능)
+            drawnEffects = drawnEffects.filter(e => !e._used);
+            marketLockTypeUsedThisRound = false; // 새 라운드, 시장동결/예언서 다시 사용 가능
             // activeKeyEffect: market_fix/prophecy는 라운드 넘어도 유지, 나머지만 재탐색
             if (activeKeyEffect && activeKeyEffect.type !== 'market_fix' && activeKeyEffect.type !== 'prophecy') {
                 activeKeyEffect = drawnEffects.find(e => !e._used) || null;
@@ -2553,6 +2622,13 @@
 
             // 돌발 상황 처리 중인 경우 (돌발 투자 화면 -> 다음 라운드)
             if (window._pendingEventRound !== undefined && window._pendingEventRound !== null) {
+                // 라운드가 실제로 넘어가는 이 시점의 보유 현황으로 "비도덕 외 선박 보유" 누적 체크
+                for (const sid in portfolio) {
+                    if (portfolio[sid] > 0 && !ships[sid].isUnethical && !ships[sid].isPirate) {
+                        hasEverHeldEthicalShipAtRoundEnd = true;
+                        break;
+                    }
+                }
                 const targetRound = window._pendingEventRound;
                 window._pendingEventRound = null;
                 currentRound = targetRound;
@@ -2573,6 +2649,15 @@
 
             if (!confirm(confirmMsg)) {
                 return;
+            }
+
+            // 라운드가 실제로 넘어가는 이 시점의 보유 현황으로 "비도덕 외 선박 보유" 누적 체크
+            // (라운드 넘어가기 전에 다 팔았으면 그 선박은 "보유 안 한 것"으로 침)
+            for (const sid in portfolio) {
+                if (portfolio[sid] > 0 && !ships[sid].isUnethical && !ships[sid].isPirate) {
+                    hasEverHeldEthicalShipAtRoundEnd = true;
+                    break;
+                }
             }
 
             if (currentRound >= TOTAL_ROUNDS) {
@@ -2738,7 +2823,7 @@
                 // 왼쪽 사이드바 요약 패널 실시간 갱신용 텍스트 매핑
                 document.getElementById('news-type-badge').innerHTML = `<i class="fa-solid fa-newspaper text-amber-500"></i> 세계 정세 신문 기사`;
                 document.getElementById('news-title').textContent = sit.title;
-                document.getElementById('news-desc').textContent = `${sit.desc} (모든 선박 주가가 함께 조금씩 출렁였습니다)`;
+                document.getElementById('news-desc').textContent = `${sit.desc} (모든 선박의 주가가 출렁거렸습니다.)`;
 
                 // 다음 정세를 미리 예측해서 보여주는 카드 갱신
                 generateForecastCards();
@@ -3125,11 +3210,11 @@
                             ${(() => {
                                 const st = shipMarketStatus[shipId];
                                 if (!st || st === 'neutral' || currentRound === 0) {
-                                    return '<div class="text-center text-[10px] mb-1 rounded py-0.5" style="background:rgba(44,26,4,0.15);color:#9e7a4a;">─ 상황 변동 없음</div>';
+                                    return '<div class="text-center text-[10px] mb-1 rounded py-0.5 market-status-badge" style="background:rgba(44,26,4,0.15);color:#9e7a4a;cursor:help;" title="정세의 영향은 없지만, 세계 경제에 따른 주가의 변동은 있습니다.">─ 정세 영향 없음</div>';
                                 } else if (st === 'good') {
-                                    return '<div class="text-center text-[10px] font-black mb-1 rounded py-0.5 animate-pulse" style="background:rgba(22,101,52,0.18);color:#16a34a;border:1px solid rgba(22,101,52,0.35);">🟢 호재입니다!</div>';
+                                    return '<div class="text-center text-[10px] font-black mb-1 rounded py-0.5 animate-pulse market-status-badge" style="background:rgba(22,101,52,0.18);color:#16a34a;border:1px solid rgba(22,101,52,0.35);cursor:help;" title="글로벌 상황에 호재가 겹쳐 주가가 크게 상승합니다.">🟢 호재입니다!</div>';
                                 } else {
-                                    return '<div class="text-center text-[10px] font-black mb-1 rounded py-0.5 animate-pulse" style="background:rgba(153,27,27,0.18);color:#dc2626;border:1px solid rgba(153,27,27,0.35);">🔴 악재입니다!</div>';
+                                    return '<div class="text-center text-[10px] font-black mb-1 rounded py-0.5 animate-pulse market-status-badge" style="background:rgba(153,27,27,0.18);color:#dc2626;border:1px solid rgba(153,27,27,0.35);cursor:help;" title="글로벌 상황에 악재가 겹쳐 주가가 크게 하락합니다.">🔴 악재입니다!</div>';
                                 }
                             })()}
                         </div>
@@ -3560,12 +3645,13 @@
             localStorage.setItem(statKey, JSON.stringify(stats));
 
             // 칭호개수 칭호 판정을 위해 기존 보유 칭호(중복 제거) 개수 파악
+            // 단, [I]군(칭호개수 칭호 자신)은 자기참조로 부풀려지므로 모수에서 제외
             const myTitlesKeyEarly = `aov_titles_${playerClass}_${playerNumber}_${playerName}`;
             let existingTitleNames = new Set();
             try {
                 JSON.parse(localStorage.getItem(myTitlesKeyEarly) || '[]').forEach(t => {
                     const title = t.title || t;
-                    if (title) existingTitleNames.add(title);
+                    if (title && !COLLECTION_META_TITLES.has(title)) existingTitleNames.add(title);
                 });
             } catch(e) {}
 
@@ -3579,8 +3665,8 @@
             const earnedTitle = earnedTitles[0];
 
             const titlesContainer = document.getElementById('result-titles-container');
-            const tagLabels = { A:'자산', B:'업적', C:'선박', D:'매매', E:'도덕', F:'특별', G:'판수', H:'누적자본', I:'수집', Z:'' };
-            const tagColors = { A:'#b45309', B:'#0f766e', C:'#7c3aed', D:'#1d4ed8', E:'#15803d', F:'#9f1239', G:'#0369a1', H:'#854d0e', I:'#86198f', Z:'#6b7280' };
+            const tagLabels = { A:'자산', B:'업적', C:'선박', D:'매매', E:'도덕', F:'특별', G:'판수', H:'누적자본', I:'수집', J:'특수', Z:'' };
+            const tagColors = { A:'#b45309', B:'#0f766e', C:'#7c3aed', D:'#1d4ed8', E:'#15803d', F:'#9f1239', G:'#0369a1', H:'#854d0e', I:'#86198f', J:'#be123c', Z:'#6b7280' };
             titlesContainer.innerHTML = earnedTitles.map(function(t, i) {
                 const bgColor = i === 0 ? 'rgba(251,243,219,0.95)' : 'rgba(255,255,255,0.80)';
                 const borderColor = i === 0 ? 'rgba(200,150,12,0.60)' : 'rgba(139,90,43,0.25)';
@@ -3848,18 +3934,59 @@
             if (totalCapitalSum >= 10000)  earned.push({ tag:"H", title:"티끌 모아 태산 진행중", desc:"누적 자본 1만 레알을 넘기며 티끌이 태산이 되어가는 중입니다." });
             if (totalCapitalSum >= 3000)   earned.push({ tag:"H", title:"첫 곳간을 채운 자", desc:"누적 자본 3,000 레알. 차곡차곡 모으기 시작한 자입니다." });
 
+            // ---- [J] 신규 특수 칭호 10개 ----
+            // 1. 오올 블루 - 5가지 이상 선박 투자 항해 성공
+            if (succeededCount >= 5)
+                earned.push({ tag:"J", title:"오올 블루", desc:"5가지 이상의 선박에 투자하여 모두 무사히 항해를 성공시킨 압도적인 안목의 투자자입니다." });
+            // 2. 대양을 그리다 - 4가지 이상 항해 성공
+            if (succeededCount >= 4)
+                earned.push({ tag:"J", title:"대양을 그리다", desc:"4가지 이상의 선박에 투자하여 항해를 성공시키며 대양의 큰 그림을 그려낸 투자자입니다." });
+            // 3. 두번의 기적 - 10% 이하 확률 선박 2척 동시 성공
+            const lowProb10Count = lowProbSucceededShips.filter(p => p <= 10).length;
+            if (lowProb10Count >= 2)
+                earned.push({ tag:"J", title:"두번의 기적", desc:"10% 이하의 성공률을 지닌 선박 2척을 동시에 무사 귀환시킨, 기적이 두 번 겹친 행운의 투자자입니다." });
+            // 4. 신조차 막지 못한 항해 - 10% 이하 확률 선박 3척 동시 성공
+            if (lowProb10Count >= 3)
+                earned.push({ tag:"J", title:"신조차 막지 못한 항해", desc:"10% 이하의 성공률을 지닌 선박 3척을 동시에 무사 귀환시킨, 그 어떤 신도 막지 못한 항해를 완성한 자입니다." });
+            // 5. 골든로드 - 누적자본 70만 이상
+            if (totalCapitalSum >= 700000)
+                earned.push({ tag:"J", title:"골든로드", desc:"누적 자본 70만 레알을 쌓아올려 황금의 길을 직접 닦아낸 전설적인 거상입니다." });
+            // 6. 보이지 않는 손 - 누적자본 150만 이상
+            if (totalCapitalSum >= 1500000)
+                earned.push({ tag:"J", title:"보이지 않는 손", desc:"누적 자본 150만 레알. 시장 전체를 움직이는 보이지 않는 손이 되어버린 존재입니다." });
+            // 7. 침묵 - 9라운드까지 투자 안 하고 10라운드부터 투자하여 1만 레알 이상
+            if (firstInvestRound === TOTAL_ROUNDS && finalAssets >= 10000)
+                earned.push({ tag:"J", title:"침묵", desc:"9라운드까지 단 한 번도 움직이지 않고 침묵을 지키다가, 마지막 라운드에 단 한 번의 투자로 1만 레알 이상을 달성한 정체불명의 승부사입니다." });
+            // 8/9. 비도덕적 선박에만 투자 - 피로 세운 제국(2만)/악마(3만)
+            // "투자"의 기준은 라운드를 넘어가는 시점의 보유 여부 (중간에 사고팔아도 라운드 넘기기 전에 다 팔면 보유 안 한 것으로 침)
+            {
+                const investedIds = Object.keys(portfolio).filter(sid => portfolio[sid] > 0);
+                const everInvestedSomeUnethicalOrPirate = investedIds.some(sid => ships[sid].isUnethical || ships[sid].isPirate)
+                    || (totalInvestedInUnethical > 0);
+                const onlyUnethicalOrPirate = !hasEverHeldEthicalShipAtRoundEnd && everInvestedSomeUnethicalOrPirate;
+                if (onlyUnethicalOrPirate && finalAssets >= 30000)
+                    earned.push({ tag:"J", title:"악마", desc:"노예선과 해적선, 오직 비윤리적인 무역에만 손을 담그고도 3만 레알을 달성한, 더 이상 인간이라 부를 수 없는 존재입니다." });
+                else if (onlyUnethicalOrPirate && finalAssets >= 20000)
+                    earned.push({ tag:"J", title:"피로 세운 제국", desc:"노예선과 해적선, 오직 비윤리적인 무역에만 손을 담그고도 2만 레알을 달성한, 피로 세운 제국의 지배자입니다." });
+            }
+            // 10. 포화 속으로 - 5척 이상 침몰했음에도 1만 레알 달성
+            if (Object.values(ships).filter(s => s._ruined).length >= 5 && finalAssets >= 10000)
+                earned.push({ tag:"J", title:"포화 속으로", desc:"5척 이상의 선박이 침몰하는 참사를 겪으면서도 끝내 1만 레알을 달성해낸 불굴의 생존 전략가입니다." });
+
             // ---- [I] 칭호 개수 칭호 (이번 판 신규 획득분 포함, 도달한 모든 구간 전부 획득) ----
             const newDistinctEarnedCount = new Set(earned.map(t => t.title)).size;
             const projectedTitleCount = existingTitleCount + newDistinctEarnedCount;
-            if (projectedTitleCount >= 70) earned.push({ tag:"I", title:"역사의 증인", desc:"칭호 70개! 대항해시대의 모든 영광과 비극을 두 눈으로 직접 목격하고 기록한 역사의 증인입니다." });
-            if (projectedTitleCount >= 55) earned.push({ tag:"I", title:"이 구역 정신 나간 수집가", desc:"칭호 55개! 이 구역에서 가장 정신 나간 수집가로 인정합니다." });
-            if (projectedTitleCount >= 45) earned.push({ tag:"I", title:"칭호 박물관 관장", desc:"칭호 45개를 모아 박물관을 차려도 될 수준에 도달했습니다." });
-            if (projectedTitleCount >= 35) earned.push({ tag:"I", title:"웬만한 건 다 해본 자", desc:"칭호 35개. 이제 웬만한 플레이는 다 경험해 본 자입니다." });
-            if (projectedTitleCount >= 25) earned.push({ tag:"I", title:"칭호 욕심쟁이", desc:"칭호 25개를 모으며 욕심을 숨기지 못한 수집가입니다." });
-            if (projectedTitleCount >= 18) earned.push({ tag:"I", title:"제법 모았음", desc:"칭호 18개를 모은, 제법 본격적인 수집가입니다." });
-            if (projectedTitleCount >= 12) earned.push({ tag:"I", title:"수집 본능 각성", desc:"칭호 12개를 모으며 수집 본능이 각성한 단계입니다." });
-            if (projectedTitleCount >= 6)  earned.push({ tag:"I", title:"칭호 수집 입문자", desc:"칭호 6개를 모아 본격적인 수집의 길에 들어섰습니다." });
-            if (projectedTitleCount >= 3)  earned.push({ tag:"I", title:"칭호 첫걸음", desc:"칭호 3개를 모으며 수집의 첫걸음을 뗐습니다." });
+            const pcSuffix = ` (현재 ${projectedTitleCount}/70, 칭호 수집 관련 칭호는 집계에서 제외)`;
+            if (projectedTitleCount >= 70) earned.push({ tag:"I", title:"역사의 증인", desc:"칭호 70개! 대항해시대의 모든 영광과 비극을 두 눈으로 직접 목격하고 기록한 역사의 증인입니다." + pcSuffix });
+            if (projectedTitleCount >= 55) earned.push({ tag:"I", title:"이 구역 정신 나간 수집가", desc:"칭호 55개! 이 구역에서 가장 정신 나간 수집가로 인정합니다." + pcSuffix });
+            if (projectedTitleCount >= 45) earned.push({ tag:"I", title:"칭호 박물관 관장", desc:"칭호 45개를 모아 박물관을 차려도 될 수준에 도달했습니다." + pcSuffix });
+            if (projectedTitleCount >= 35) earned.push({ tag:"I", title:"웬만한 건 다 해본 자", desc:"칭호 35개. 이제 웬만한 플레이는 다 경험해 본 자입니다." + pcSuffix });
+            if (projectedTitleCount >= 25) earned.push({ tag:"I", title:"칭호 욕심쟁이", desc:"칭호 25개를 모으며 욕심을 숨기지 못한 수집가입니다." + pcSuffix });
+            if (projectedTitleCount >= 18) earned.push({ tag:"I", title:"제법 모았음", desc:"칭호 18개를 모은, 제법 본격적인 수집가입니다." + pcSuffix });
+            if (projectedTitleCount >= 12) earned.push({ tag:"I", title:"수집 본능 각성", desc:"칭호 12개를 모으며 수집 본능이 각성한 단계입니다." + pcSuffix });
+            if (projectedTitleCount >= 6)  earned.push({ tag:"I", title:"칭호 수집 입문자", desc:"칭호 6개를 모아 본격적인 수집의 길에 들어섰습니다." + pcSuffix });
+            if (projectedTitleCount >= 3)  earned.push({ tag:"I", title:"칭호 첫걸음", desc:"칭호 3개를 모으며 수집의 첫걸음을 뗐습니다." + pcSuffix });
+
 
             // ---- 기본 칭호 (항상 포함) ----
             if (earned.length === 1 && earned[0].tag === 'A' && finalAssets < 1100)
@@ -4349,6 +4476,8 @@
             maxSingleShipRatio = 0;
             buyActionCount = 0;
             sellActionCount = 0;
+            firstInvestRound = null;
+            hasEverHeldEthicalShipAtRoundEnd = false;
             triggeredEventRounds = [];
             pendingRoundAfterEvent = null;
             currentActiveEvent = null;
@@ -4357,10 +4486,11 @@
             window._pendingEventRound = null;
             currentForecastPool = [];
             keyUsedThisRound = false;
+            marketLockTypeUsedThisRound = false;
             window._blockedShips = new Set();
             papalDonationCount = 0;
-            _roundMoralDeduct = { E: 0, B: 0 };
-            _roundMoralDeductQty = { E: 0, B: 0 };
+            _roundStartPortfolio = { E: 0, B: 0 };
+            _roundAppliedDeduct = { E: 0, B: 0 };
             window._immunityRoundActive = false;
             // 활성 효과 완전 초기화 (다른 아이디로 접속해도 초기화)
             activeKeyEffect = null;
@@ -4477,6 +4607,7 @@
         let activeKeyEffect = null; // 단일 활성 효과 (하위호환)
         let drawnEffects = [];      // 뽑아둔 효과 목록 (버튼으로 표시)
         let keyUsedThisRound = false; // 더 이상 사용 안 함 (제한 제거)
+        let marketLockTypeUsedThisRound = false; // 시장동결/예언서: 이번 라운드에 이미 발동했는지 (효과 객체 소멸과 무관하게 추적)
 
         // 매판 지급 기준표 [최소레벨, 지급 수] (높은 레벨일수록 적용)
         const KEY_LEVEL_GRANTS = [
@@ -4507,13 +4638,13 @@
 
         const KEY_EFFECTS = [
             { type:'market_fix',   label:'시장 동결',      desc:'다음 라운드에 어떠한 주가 변동도 나타나지 않습니다.' },
-            { type:'manipulation', label:'시세 조작',      desc:'원하는 선박 한 척의 성공률을 20% 높일 수 있습니다.' },
+            { type:'manipulation', label:'시세 조작',      desc:'원하는 선박 한 척의 성공률을 30% 높일 수 있습니다. (시장 동결 효과를 무시하고 적용됩니다)' },
             { type:'prophecy',     label:'예언서',         desc:'다음 라운드에 벌어질 상황을 직접 선택할 수 있습니다.' },
             { type:'big_gain',     label:'뜻밖의 개이득',  desc:'자본 1,000 레알을 즉시 획득합니다.' },
             { type:'small_gain',   label:'소확행',         desc:'자본 500 레알을 즉시 획득합니다.' },
             { type:'immunity',     label:'부정 조사 면제', desc:'이번 라운드에 비윤리 선박에 투자해도 도덕지수 패널티를 얻지 않습니다.' },
             { type:'insurance',    label:'보험',           desc:'투자했다가 침몰한 선박 1척에 사용하면 투자금의 50%를 돌려받습니다.' },
-            { type:'disaster',     label:'대형 사고',      desc:'⚠️ 불운! 뽑는 즉시 투자 중인 선박 1척이 강제 침몰합니다.' },
+            { type:'disaster',     label:'대형 사고',      desc:'⚠️ 불운! 뽑는 즉시 남은 선박 중 1척이 무조건 강제 침몰합니다.' },
         ];
 
         // 로컬 스토리지에서 부여된 레벨 로드 (하위호환용)
@@ -4828,13 +4959,19 @@
         function renderDrawnEffects() {
             const area = document.getElementById('drawn-effects-area');
             if (!area) return;
+            // 사용된 효과는 회색 처리 대신 즉시 목록에서 제거 (라운드 내내 표시할 필요 없음)
+            drawnEffects = drawnEffects.filter(e => !e._used);
+            // market_fix/prophecy는 사용 후에도 라운드 내내 효력이 지속되므로 (목록에서는 사라져도) activeKeyEffect를 덮어쓰지 않음
+            const keepActive = activeKeyEffect &&
+                (activeKeyEffect.type === 'market_fix' || activeKeyEffect.type === 'prophecy') &&
+                !activeKeyEffect._expired;
             if (drawnEffects.length === 0) {
                 area.style.display = 'none';
+                if (!keepActive) activeKeyEffect = null;
                 return;
             }
             area.style.display = 'flex';
             area.innerHTML = drawnEffects.map((eff, idx) => {
-                const usedMark = eff._used ? 'opacity:0.4;text-decoration:line-through;' : '';
                 const extra = eff.type === 'prophecy' && eff.forcedSitIndex !== undefined
                     ? ` ✅` : '';
                 return `<div style="position:relative;display:inline-block;">
@@ -4842,16 +4979,18 @@
                         onclick="activateDrawnEffect(${idx})"
                         onmouseenter="showDrawnEffectTooltip(${idx}, this)"
                         onmouseleave="hideDrawnEffectTooltip()"
-                        style="${usedMark}background:linear-gradient(135deg,rgba(200,150,12,0.30),rgba(245,158,11,0.15));
+                        style="background:linear-gradient(135deg,rgba(200,150,12,0.30),rgba(245,158,11,0.15));
                                border:1px solid rgba(200,150,12,0.65);border-radius:8px;
                                padding:3px 9px;font-size:11px;font-weight:900;color:#f59e0b;
-                               cursor:${eff._used?'default':'pointer'};white-space:nowrap;">
+                               cursor:pointer;white-space:nowrap;">
                         🗝️ ${eff.label}${extra}
                     </button>
                 </div>`;
             }).join('');
-            // 하위호환 - activeKeyEffect도 첫 번째 미사용 효과로 동기화
-            activeKeyEffect = drawnEffects.find(e => !e._used) || null;
+            // 하위호환 - activeKeyEffect도 첫 번째 미사용 효과로 동기화 (위에서 계산한 keepActive 재사용)
+            if (!keepActive) {
+                activeKeyEffect = drawnEffects.find(e => !e._used) || null;
+            }
         }
 
         // 뽑힌 효과 툴팁
@@ -4941,17 +5080,13 @@
             const eff = drawnEffects[idx];
             if (!eff || eff._used) return;
 
-            // 시장동결/예언서는 라운드당 1개만 허용
+            // 시장동결/예언서는 라운드당 1개만 허용 (효과 객체가 사라져도 플래그로 추적)
             if (eff.type === 'market_fix' || eff.type === 'prophecy') {
-                const conflict = drawnEffects.find(e =>
-                    e !== eff && !e._expired &&
-                    (e.type === 'market_fix' || e.type === 'prophecy') &&
-                    e._used
-                );
-                if (conflict) {
-                    showCustomAlert(`⚠️ [${conflict.label}]이 이미 활성화되어 있습니다. 시장동결/예언서는 한 라운드에 하나만 사용 가능합니다.`);
+                if (marketLockTypeUsedThisRound) {
+                    showCustomAlert(`⚠️ 시장동결/예언서는 한 라운드에 하나만 사용 가능합니다.`);
                     return;
                 }
+                marketLockTypeUsedThisRound = true;
             }
 
             eff._used = true;
@@ -4969,7 +5104,7 @@
                 const shipBtns = Object.keys(ships).filter(id => !ships[id]._ruined).map(id => `
                     <button onclick="applyManipulationFromDrawn('${id}',${idx},this)"
                         style="background:rgba(200,150,12,0.15);border:1px solid rgba(200,150,12,0.4);border-radius:8px;padding:7px 12px;color:#e8d5a3;font-weight:700;font-size:12px;cursor:pointer;text-align:left;">
-                        ⚡ ${ships[id].name} (현재 ${ships[id].currentProb}% → ${Math.min(98,ships[id].currentProb+20)}%)
+                        ⚡ ${ships[id].name} (현재 ${ships[id].currentProb}% → ${Math.min(98,ships[id].currentProb+30)}%)
                     </button>`).join('');
                 modal2.innerHTML = `<div style="background:linear-gradient(145deg,#1c0e02,#2c1a04);border:2px solid rgba(200,150,12,0.5);border-radius:16px;width:100%;max-width:360px;padding:24px;text-align:center;">
                     <div style="font-size:28px;margin-bottom:6px;">⚙️</div>
@@ -4984,9 +5119,10 @@
                 showCustomAlert(`🗝️ [시장 동결] 사용시 다음 라운드에 어떤 상황이 나와도 주가 변동이 없습니다.`);
             } else if (eff.type === 'manipulation') {
                 activeKeyEffect = eff;
-                showCustomAlert(`🗝️ [시세 조작] 사용시 특정 선박의 성공률을 20% 높일 수 있습니다. 성공률이 높아져 주가도 상승합니다.`);
+                showCustomAlert(`🗝️ [시세 조작] 사용시 특정 선박의 성공률을 30% 높일 수 있습니다. 성공률이 높아져 주가도 상승합니다. (시장 동결 효과를 무시합니다)`);
             } else if (eff.type === 'prophecy') {
                 activeKeyEffect = eff;
+                renderForecastCards();
                 showCustomAlert(`🗝️ [예언서] 예측 카드를 클릭하여 사용하며, 사용시 다음 라운드에 반드시 예측한 상황이 전개됩니다. 단, 돌발 상황이 발생할 수는 있습니다.`);
             } else if (eff.type === 'immunity') {
                 eff._used = true;
@@ -4994,14 +5130,16 @@
                 window._immunityRoundActive = true;
 
                 // 소급 취소: 이번 라운드에 이미 감점된 도덕 점수 전액 환원
+                // + 현재 보유량을 새 베이스라인으로 편입시켜 이후 같은 라운드 내 매도/재매수에도 감점 면제 유지
                 let refundTotal = 0;
-                for (const sid in _roundMoralDeduct) {
-                    if (_roundMoralDeduct[sid] > 0) {
-                        ethicalScore += _roundMoralDeduct[sid];
-                        refundTotal += _roundMoralDeduct[sid];
-                        _roundMoralDeduct[sid] = 0;
-                        _roundMoralDeductQty[sid] = 0;
+                for (const sid of ['E', 'B']) {
+                    const already = _roundAppliedDeduct[sid] || 0;
+                    if (already > 0) {
+                        ethicalScore += already;
+                        refundTotal += already;
                     }
+                    _roundStartPortfolio[sid] = portfolio[sid] || 0;
+                    _roundAppliedDeduct[sid] = 0;
                 }
                 updateUI();
                 const refundMsg = refundTotal > 0
@@ -5041,6 +5179,12 @@
                 showCustomAlert('🗝️ 보유한 황금 열쇠가 없습니다.');
                 return;
             }
+            // 미사용 보관 효과는 동시에 최대 2개까지만 보유 가능
+            const unusedCount = drawnEffects.filter(e => !e._used).length;
+            if (unusedCount >= 2) {
+                showCustomAlert('🗝️ 미사용 효과는 동시에 2개까지만 보유할 수 있습니다! 기존 효과를 먼저 사용하세요.');
+                return;
+            }
             openUseKeyModal();
         }
 
@@ -5069,26 +5213,17 @@
             const effect = KEY_EFFECTS[Math.floor(Math.random() * KEY_EFFECTS.length)];
             playSound('golden_key');
 
-            // 대형 사고 — 즉시 발동 (투자 여부 무관, 전 선박 중 랜덤 1~2개 각 50% 확률 침몰)
+            // 대형 사고 — 즉시 발동 (투자 여부 무관, 남은 선박 중 무조건 1척 랜덤 침몰)
             if (effect.type === 'disaster') {
                 const candidates = Object.keys(ships).filter(id => !ships[id]._ruined);
-                // 1~2개 랜덤 선택
-                const shuffled = candidates.sort(() => Math.random() - 0.5);
-                const count = Math.random() < 0.5 ? 1 : 2;
-                const targets = shuffled.slice(0, count);
-                const sunk = [];
-                for (const id of targets) {
-                    if (Math.random() < 0.5) { // 각각 50% 확률
-                        ships[id]._ruined = true;
-                        ships[id].currentProb = 0;
-                        sunk.push(ships[id].name);
-                    }
-                }
-                updateUI();
-                if (sunk.length > 0) {
-                    showCustomAlert(`🗝️ [대형 사고] ⚠️ ${sunk.join(', ')}이(가) 즉시 침몰했습니다!`);
+                if (candidates.length > 0) {
+                    const target = candidates[Math.floor(Math.random() * candidates.length)];
+                    ships[target]._ruined = true;
+                    ships[target].currentProb = 0;
+                    updateUI();
+                    showCustomAlert(`🗝️ [대형 사고] ⚠️ ${ships[target].name}이(가) 즉시 침몰했습니다!`);
                 } else {
-                    showCustomAlert(`🗝️ [대형 사고] ⚠️ 사고가 발생했으나 기적적으로 모든 선박이 생존했습니다!`);
+                    showCustomAlert(`🗝️ [대형 사고] ⚠️ 사고가 발생했으나 침몰시킬 선박이 남아있지 않습니다!`);
                 }
                 return;
             }
@@ -5114,9 +5249,9 @@
         function applyManipulation(shipId, btn) {
             btn.closest('[style*=fixed]').remove();
             if (ships[shipId]) {
-                ships[shipId].currentProb = Math.min(98, ships[shipId].currentProb + 20);
+                ships[shipId].currentProb = Math.min(98, ships[shipId].currentProb + 30);
                 updateUI();
-                showCustomAlert(`⚙️ ${ships[shipId].name} 성공률 +20 적용 완료!`);
+                showCustomAlert(`⚙️ ${ships[shipId].name} 성공률 +30 적용 완료!`);
             }
             setActiveKeyEffect(null);
         }
@@ -5128,10 +5263,10 @@
             if (!eff) return;
             eff._used = true;
             if (ships[shipId]) {
-                ships[shipId].currentProb = Math.min(98, ships[shipId].currentProb + 20);
+                ships[shipId].currentProb = Math.min(98, ships[shipId].currentProb + 30);
                 updateUI();
                 playSound('golden_key');
-                showCustomAlert(`⚙️ ${ships[shipId].name} 성공률 +20 적용 완료!`);
+                showCustomAlert(`⚙️ ${ships[shipId].name} 성공률 +30 적용 완료!`);
             }
             renderDrawnEffects();
         }
@@ -5305,12 +5440,28 @@
         }
 
         // 전체 칭호 목록 (모든 존재 칭호 + 내가 획득한 것 표시)
+        // [I]군 칭호 수집 칭호 자신은 컬렉션 집계에서 제외 (자기참조 방지)
+        const COLLECTION_META_TITLES = new Set([
+            "역사의 증인", "이 구역 정신 나간 수집가", "칭호 박물관 관장",
+            "웬만한 건 다 해본 자", "칭호 욕심쟁이", "제법 모았음",
+            "수집 본능 각성", "칭호 수집 입문자", "칭호 첫걸음"
+        ]);
         const ALL_TITLES_LIST = [
             // 신화
             {title:"우주적 진리", rarity:145, hint:"최종 자산 100,000 레알 이상 달성"},
+            {title:"보이지 않는 손", rarity:144, hint:"누적 자본 1,500,000 레알 이상 달성"},
+            {title:"신조차 막지 못한 항해", rarity:142, hint:"성공률 10% 이하 선박 3척이 동시에 항해 성공"},
+            {title:"악마", rarity:143, hint:"노예선·해적선에만 투자하고 최종 자산 30,000 레알 이상 달성"},
+            {title:"오올 블루", rarity:141, hint:"5가지 이상의 선박에 투자하여 모두 항해 성공"},
+            {title:"포화 속으로", rarity:139, hint:"5척 이상의 선박이 침몰했음에도 최종 자산 10,000 레알 이상 달성"},
+            {title:"피로 세운 제국", rarity:138, hint:"노예선·해적선에만 투자하고 최종 자산 20,000 레알 이상 달성"},
             {title:"부의 창조신", rarity:125, hint:"최종 자산 70,000 레알 이상 달성"},
             // SSSS (전설)
             {title:"바다의 신 포세이돈", rarity:120, hint:"최종 자산 50,000 레알 이상 달성 (전설의 경지)"},
+            {title:"침묵", rarity:120, hint:"9라운드까지 투자하지 않고 10라운드에 처음 투자하여 최종 자산 10,000 레알 이상 달성"},
+            {title:"골든로드", rarity:118, hint:"누적 자본 700,000 레알 이상 달성"},
+            {title:"대양을 그리다", rarity:115, hint:"4가지 이상의 선박에 투자하여 모두 항해 성공"},
+            {title:"두번의 기적", rarity:112, hint:"성공률 10% 이하 선박 2척이 동시에 항해 성공"},
             // SSS
             {title:"대항해시대 바다의 황제", rarity:100, hint:"최종 자산 30,000 레알 이상 달성"},
             // SS
@@ -5395,15 +5546,15 @@
             {title:"티끌 모아 태산 진행중", rarity:8, hint:"누적 자본 10,000 레알 이상"},
             {title:"첫 곳간을 채운 자", rarity:3, hint:"누적 자본 3,000 레알 이상"},
             // 칭호 개수 칭호
-            {title:"역사의 증인", rarity:113, hint:"칭호 70개 이상 보유"},
-            {title:"이 구역 정신 나간 수집가", rarity:95, hint:"칭호 55개 이상 보유"},
-            {title:"칭호 박물관 관장", rarity:80, hint:"칭호 45개 이상 보유"},
-            {title:"웬만한 건 다 해본 자", rarity:60, hint:"칭호 35개 이상 보유"},
-            {title:"칭호 욕심쟁이", rarity:45, hint:"칭호 25개 이상 보유"},
-            {title:"제법 모았음", rarity:25, hint:"칭호 18개 이상 보유"},
-            {title:"수집 본능 각성", rarity:15, hint:"칭호 12개 이상 보유"},
-            {title:"칭호 수집 입문자", rarity:8, hint:"칭호 6개 이상 보유"},
-            {title:"칭호 첫걸음", rarity:3, hint:"칭호 3개 이상 보유"},
+            {title:"역사의 증인", rarity:113, hint:"칭호 70개 이상 보유 (칭호 수집 관련 칭호는 제외)"},
+            {title:"이 구역 정신 나간 수집가", rarity:95, hint:"칭호 55개 이상 보유 (칭호 수집 관련 칭호는 제외)"},
+            {title:"칭호 박물관 관장", rarity:80, hint:"칭호 45개 이상 보유 (칭호 수집 관련 칭호는 제외)"},
+            {title:"웬만한 건 다 해본 자", rarity:60, hint:"칭호 35개 이상 보유 (칭호 수집 관련 칭호는 제외)"},
+            {title:"칭호 욕심쟁이", rarity:45, hint:"칭호 25개 이상 보유 (칭호 수집 관련 칭호는 제외)"},
+            {title:"제법 모았음", rarity:25, hint:"칭호 18개 이상 보유 (칭호 수집 관련 칭호는 제외)"},
+            {title:"수집 본능 각성", rarity:15, hint:"칭호 12개 이상 보유 (칭호 수집 관련 칭호는 제외)"},
+            {title:"칭호 수집 입문자", rarity:8, hint:"칭호 6개 이상 보유 (칭호 수집 관련 칭호는 제외)"},
+            {title:"칭호 첫걸음", rarity:3, hint:"칭호 3개 이상 보유 (칭호 수집 관련 칭호는 제외)"},
         ];
 
         function showRouteModal(shipId) {
@@ -5529,10 +5680,17 @@
                 const displayName = isLoggedIn ? (name || '나') : '나';
                 let rows = '';
                 const sortedTitles = ALL_TITLES_LIST.slice().sort(function(a, b) { return b.rarity - a.rarity; });
+                // [I]군(칭호 수집 칭호) 집계용 보유 개수 — 자기참조 메타칭호 제외하고 계산
+                const collectionOwnedCount = Array.from(myTitleSet).filter(function(t){ return !COLLECTION_META_TITLES.has(t); }).length;
                 sortedTitles.forEach(function(entry) {
                     const rl = getTitleRarityLabel(entry.rarity);
                     const owned = isLoggedIn && myTitleSet.has(entry.title);
-                    const hintText = entry.hint ? ('📋 획득 조건: ' + entry.hint) : '';
+                    let hintText = entry.hint ? ('📋 획득 조건: ' + entry.hint) : '';
+                    if (COLLECTION_META_TITLES.has(entry.title)) {
+                        const m = /([0-9]+)개 이상 보유/.exec(entry.hint || '');
+                        const threshold = m ? m[1] : '?';
+                        hintText = '📋 획득 조건: 칭호 ' + threshold + '개 이상 보유 (칭호 수집 관련 칭호는 제외) — 현재 ' + collectionOwnedCount + '/' + threshold;
+                    }
                     rows += '<div data-hint="' + hintText.replace(/"/g, '&quot;') + '" style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;margin-bottom:3px;background:' + (owned ? 'rgba(200,150,12,0.12)' : 'rgba(0,0,0,0.15)') + ';opacity:' + (owned ? '1' : '0.38') + ';cursor:help;">'
                       + '<span style="min-width:32px;font-size:9px;font-weight:900;color:'+rl.color+';background:'+rl.color+'22;border:1px solid '+rl.color+'44;border-radius:3px;padding:1px 4px;text-align:center;">['+rl.label+']</span>'
                       + '<span style="font-size:11px;color:' + (owned ? '#2c1a04' : '#9e7a4a') + ';font-weight:' + (owned ? '700' : '400') + ';margin-left:6px;">'
