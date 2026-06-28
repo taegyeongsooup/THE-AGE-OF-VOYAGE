@@ -414,10 +414,22 @@
 
             main { overflow: hidden !important; }
             #screen-game { height: 100%; }
-            #left-panel { height: 100%; }
+            #left-panel {
+                height: 100%;
+                /* 자산 포트폴리오 축소로도 8개 선박 전부 표시 시 내용이 넘칠 수 있어, 잘리는 대신 패널 자체가 스크롤되도록 안전망 마련 */
+                overflow-y: auto;
+            }
             #right-panel { height: 100%; }
             #ships-grid { grid-template-rows: repeat(2, 1fr) !important; height: 100%; }
             #ships-grid > div { height: 100%; }
+
+            /* 투자 현황 표: 8행(헤더+8선박) 기준 고정 높이로 확보. 정세예측은 원래 비율 유지 */
+            .panel-live-table { flex: 0 0 auto; }
+            .panel-forecast { flex: 0 0 auto; }
+            .panel-live-table-scroll { height: 188px; }
+            /* 표 행/헤더 패딩 압축 — 8행이 더 빡빡하게 들어가도록 */
+            #live-portfolio-table-wrap th { padding-top: 2px !important; padding-bottom: 2px !important; }
+            #live-portfolio-table-wrap td { padding-top: 2px !important; padding-bottom: 2px !important; }
         }
 
         /* 창 크기 대응 - JS scale 방식으로 처리 (CSS zoom 제거) */
@@ -860,7 +872,7 @@
             </div>
             
             <h2 class="header-title text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text mb-2 tracking-tight" style="background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                대항해 시대: 운명을 건 항해(3.43v)
+                대항해 시대: 운명을 건 항해(3.50v)
             </h2>
             <p class="text-slate-300 max-w-2xl text-sm sm:text-base mb-3 leading-relaxed px-4">
                 16세기, 유럽의 야심 찬 선장들이 미지의 신대륙과 인도를 향해 닻을 올립니다.<br>
@@ -938,22 +950,34 @@
 
                 
                 <!-- Financial Status Card -->
-                <div class="rounded-2xl p-3 shadow-xl relative overflow-hidden shrink-0" style="background:linear-gradient(145deg,#f5edd6,#ede0c0); border:1px solid rgba(139,90,43,0.40); color:#1a0f00;">
+                <div class="rounded-2xl p-3 lg:p-2 shadow-xl relative overflow-hidden shrink-0" style="background:linear-gradient(145deg,#f5edd6,#ede0c0); border:1px solid rgba(139,90,43,0.40); color:#1a0f00;">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
-                    <h3 class="text-slate-400 text-[12px] uppercase tracking-wider mb-1.5 font-bold flex items-center gap-1.5">
+                    <h3 class="text-slate-400 text-[12px] uppercase tracking-wider mb-1.5 lg:mb-1 font-bold flex items-center gap-1.5">
                         <i class="fa-solid fa-wallet text-emerald-500"></i> 자산 포트폴리오
                     </h3>
                     
-                    <!-- 현재 총 자산 (강조) -->
-                    <div class="mb-2 px-2 py-1.5 rounded-xl text-center" style="background:linear-gradient(135deg,rgba(200,150,12,0.18),rgba(245,158,11,0.08));border:1.5px solid rgba(200,150,12,0.50);">
-                        <span class="text-[10px] font-bold uppercase tracking-wider block" style="color:#7a4a1a;">💰 현재 총 자산</span>
-                        <div class="flex items-baseline justify-center gap-1 mt-0.5">
-                            <span class="font-black leading-none" id="stat-total-assets" style="font-size:clamp(18px,2.5vw,26px);color:#7c2d12;text-shadow:0 1px 4px rgba(200,150,12,0.3);">1,000</span>
-                            <span class="text-[11px] font-bold" style="color:#9e7a4a;">레알</span>
+                    <!-- 현재 총 자산 (강조) — 데스크탑(lg)에서는 여유현금/총주식가치와 한 줄로 합쳐 공간 절약 -->
+                    <div class="mb-2 lg:mb-1.5 px-2 py-1.5 lg:py-1.5 rounded-xl text-center lg:flex lg:items-center lg:justify-between lg:text-left lg:gap-2" style="background:linear-gradient(135deg,rgba(200,150,12,0.18),rgba(245,158,11,0.08));border:1.5px solid rgba(200,150,12,0.50);">
+                        <div class="lg:flex-1">
+                            <span class="text-[10px] font-bold uppercase tracking-wider block" style="color:#7a4a1a;">💰 현재 총 자산</span>
+                            <div class="flex items-baseline lg:justify-start justify-center gap-1 mt-0.5">
+                                <span class="font-black leading-none" id="stat-total-assets" style="font-size:clamp(18px,2.5vw,26px);color:#7c2d12;text-shadow:0 1px 4px rgba(200,150,12,0.3);">1,000</span>
+                                <span class="text-[11px] font-bold" style="color:#9e7a4a;">레알</span>
+                            </div>
+                        </div>
+                        <div class="hidden lg:block lg:flex-1 lg:border-l lg:pl-2" style="border-color:rgba(139,90,43,0.35);">
+                            <span class="text-[10px] text-slate-500 block leading-tight">여유 현금</span>
+                            <span class="text-sm font-black text-[#1a0f00] leading-none" id="stat-cash-lg">1,000</span>
+                            <span class="text-[10px] text-slate-500 font-bold ml-0.5">레알</span>
+                        </div>
+                        <div class="hidden lg:block lg:flex-1 lg:border-l lg:pl-2" style="border-color:rgba(139,90,43,0.35);">
+                            <span class="text-[10px] text-slate-500 block leading-tight">총 주식 가치</span>
+                            <span class="text-sm font-black text-blue-700 leading-none" id="stat-shares-val-lg">0</span>
+                            <span class="text-[10px] text-slate-500 font-bold ml-0.5">레알</span>
                         </div>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-3">
+                    <div class="grid grid-cols-2 gap-3 lg:hidden">
                         <div>
                             <span class="text-[12px] text-slate-500 block leading-tight">여유 현금</span>
                             <span class="text-lg sm:text-xl font-black text-white leading-none" id="stat-cash">1,000</span>
@@ -966,7 +990,7 @@
                         </div>
                     </div>
 
-                    <div class="mt-2 pt-1.5 border-t border-slate-800/80 flex justify-between items-center text-[12px]">
+                    <div class="mt-2 lg:mt-1.5 pt-1.5 lg:pt-1 border-t border-slate-800/80 flex justify-between items-center text-[12px]">
                         <span style="color:#5c3d11;font-weight:700;font-size:11px;">비윤리 투자액:</span>
                         <div class="flex items-center gap-1.5">
                             <span class="font-bold px-1.5 py-0.5 rounded" id="stat-unethical-invest"
@@ -996,13 +1020,13 @@
                 </div>
 
                 <!-- Live Investment Status table (실시간 요약 표: 선단명/투자상품/평단가/보유주수/평가금) -->
-                <div class="rounded-2xl p-2.5 shadow-xl flex flex-col min-h-0" style="flex:1.1; background:linear-gradient(145deg,#f5edd6,#ede0c0); border:1px solid rgba(139,90,43,0.40); color:#1a0f00;">
-                    <div class="flex items-center gap-1.5 shrink-0 mb-1.5">
+                <div class="rounded-2xl p-2.5 lg:p-1.5 shadow-xl flex flex-col min-h-0 panel-live-table" style="background:linear-gradient(145deg,#f5edd6,#ede0c0); border:1px solid rgba(139,90,43,0.40); color:#1a0f00;">
+                    <div class="flex items-center gap-1.5 shrink-0 mb-1.5 lg:mb-1">
                         <i class="fa-solid fa-receipt text-amber-500 text-[12px]"></i>
                         <span class="text-[12px] uppercase tracking-wider font-bold" style="color:#c9a96e;">내 투자 선박 실시간 현황</span>
                         <span class="text-[10px] ml-auto" style="color:#7a5c2e;">(<span class="pnl-profit">빨강=이득</span> · <span class="pnl-loss">파랑=손해</span>)</span>
                     </div>
-                    <div class="flex-grow overflow-y-auto border rounded-lg min-h-0" style="border-color:rgba(139,90,43,0.25); background:rgba(255,255,255,0.35);">
+                    <div class="flex-grow overflow-y-auto border rounded-lg min-h-0 panel-live-table-scroll" style="border-color:rgba(139,90,43,0.25); background:rgba(255,255,255,0.35);">
                         <table class="w-full text-[10px]" id="live-portfolio-table-wrap" style="table-layout:fixed;">
                             <colgroup>
                                 <col style="width:24%;">
@@ -1014,12 +1038,13 @@
                             </colgroup>
                             <thead class="sticky top-0 z-10" style="background:rgba(210,185,140,0.98);">
                                 <tr style="color:#3d1a00;font-weight:800;font-size:10px;">
-                                    <th class="p-1.5 text-left">선단명</th>
-                                    <th class="p-1 text-center">상품</th>
-                                    <th class="p-1 text-center">평단가</th>
-                                    <th class="p-1 text-center">주수</th>
-                                    <th class="p-1 text-center">손익</th>
-                                    <th class="p-1 text-right">수익률</th>
+                                    <th class="p-1.5 lg:py-0.5 lg:px-1.5 text-left">선단명</th>
+                                    <th class="p-1 lg:py-0.5 lg:px-1 text-center">상품</th>
+                                    <th class="p-1 lg:py-0.5 lg:px-1 text-center">평단가</th>
+                                    <th class="p-1 lg:py-0.5 lg:px-1 text-center">주수</th>
+                                    <th class="p-1 lg:py-0.5 lg:px-1 text-center">손익</th>
+
+                                    <th class="p-1 lg:py-0.5 lg:px-1 text-right">수익률</th>
                                 </tr>
                             </thead>
                             <tbody id="live-portfolio-table">
@@ -1028,7 +1053,7 @@
                     </div>
                 </div>
 
-                <div id="forecast-panel" class="rounded-2xl p-2.5 shadow-xl shrink-0" style="background:linear-gradient(145deg,rgba(28,12,2,0.93),rgba(40,22,4,0.90)); border:1px solid rgba(139,90,43,0.50); overflow:visible;" style="flex: 0.9; display:flex; flex-direction:column; min-height:0;">
+                <div id="forecast-panel" class="rounded-2xl p-2.5 shadow-xl shrink-0 panel-forecast" style="background:linear-gradient(145deg,rgba(28,12,2,0.93),rgba(40,22,4,0.90)); border:1px solid rgba(139,90,43,0.50); overflow:visible; display:flex; flex-direction:column; min-height:0;">
                     <h3 class="text-amber-300 text-[12px] uppercase tracking-wider mb-1.5 font-bold flex items-center gap-1.5 shrink-0">
                         <i class="fa-solid fa-binoculars"></i> 다음 정세 예측 첩보
                     </h3>
@@ -2493,7 +2518,7 @@
         // 예고된 후보 중, 부여된 확률(가중치)에 따라 실제로 발생할 다음 상황 1개를 추첨
         function drawWeightedSituation() {
             // 예언서 강제 지정
-            if (activeKeyEffect && activeKeyEffect.type === 'prophecy' && activeKeyEffect.forcedSitIndex !== undefined) {
+            if (activeKeyEffect && activeKeyEffect.type === 'prophecy' && activeKeyEffect._activated && activeKeyEffect.forcedSitIndex !== undefined) {
                 const forcedIdx = activeKeyEffect.forcedSitIndex; // 소비 전에 먼저 저장
                 const forced = situations[forcedIdx];
                 setActiveKeyEffect(null); // 효과 소비
@@ -2559,7 +2584,7 @@
                 const sitIdx = situations.indexOf(p.situation);
 
                 // 예언서 활성 상태 시 선택된 카드 강조
-                const isProphecyActive = activeKeyEffect && activeKeyEffect.type === 'prophecy';
+                const isProphecyActive = activeKeyEffect && activeKeyEffect.type === 'prophecy' && activeKeyEffect._activated;
                 const isSelected = isProphecyActive && activeKeyEffect.forcedSitIndex === sitIdx;
                 const cardStyle = isSelected
                     ? 'background:rgba(200,150,12,0.25);border-color:rgba(200,150,12,0.80);'
@@ -2600,6 +2625,26 @@
         let pendingRoundAfterEvent = null; // 돌발 이벤트 종료 후 이어서 진행할 라운드 번호
 
         let _proceedLock = false;
+        // 보관 중인 [대형 사고] 효과를 자동 발동 — 라운드(혹은 돌발 상황)가 실제로 "넘어가는" 시점에만 호출
+        // 투자 여부와 무관하게 아직 침몰하지 않은 전체 선박 중 무작위 1척을 강제 침몰시킴
+        // (보유 선박으로만 한정하면, 전환 직전에 모두 팔아치워 리스크를 회피할 수 있게 되므로 의도적으로 전체 선박을 대상으로 함)
+        function triggerPendingDisaster() {
+            const eff = drawnEffects.find(e => e.type === 'disaster' && !e._used);
+            if (!eff) return;
+            eff._used = true;
+            const candidates = Object.keys(ships).filter(id => !ships[id]._ruined);
+            if (candidates.length > 0) {
+                const target = candidates[Math.floor(Math.random() * candidates.length)];
+                ships[target]._ruined = true;
+                ships[target].currentProb = 0;
+                updateUI();
+                showCustomAlert(`🗝️ [대형 사고] ⚠️ ${ships[target].name}이(가) 무작위로 강제 침몰했습니다!`);
+            } else {
+                showCustomAlert(`🗝️ [대형 사고] ⚠️ 사고가 발생했으나 침몰시킬 선박이 남아있지 않습니다!`);
+            }
+            renderDrawnEffects();
+        }
+
         function proceedNextRound() {
             if (_proceedLock) return;
             _proceedLock = true;
@@ -2615,13 +2660,18 @@
             // 라운드 전환 시 사용된 효과는 예외 없이 모두 목록에서 정리 (다음 라운드에 새로 뽑기 가능)
             drawnEffects = drawnEffects.filter(e => !e._used);
             marketLockTypeUsedThisRound = false; // 새 라운드, 시장동결/예언서 다시 사용 가능
-            // activeKeyEffect: market_fix/prophecy는 라운드 넘어도 유지, 나머지만 재탐색
-            if (activeKeyEffect && activeKeyEffect.type !== 'market_fix' && activeKeyEffect.type !== 'prophecy') {
-                activeKeyEffect = drawnEffects.find(e => !e._used) || null;
+            // activeKeyEffect: market_fix/prophecy는 헤더에서 '사용하기'로 명시적으로 활성화된 경우(_activated)에만 라운드 넘어도 유지
+            // (자동으로 미사용 효과를 activeKeyEffect에 끌어오면, 헤더 사용 버튼 없이도 예측 카드가 선택 가능해지는 버그 발생)
+            if (activeKeyEffect && (activeKeyEffect.type === 'market_fix' || activeKeyEffect.type === 'prophecy') && activeKeyEffect._activated) {
+                // 유지
+            } else {
+                activeKeyEffect = null;
             }
 
             // 돌발 상황 처리 중인 경우 (돌발 투자 화면 -> 다음 라운드)
             if (window._pendingEventRound !== undefined && window._pendingEventRound !== null) {
+                // 라운드가 실제로 넘어가는 이 시점에 [대형 사고] 자동 발동 체크
+                triggerPendingDisaster();
                 // 라운드가 실제로 넘어가는 이 시점의 보유 현황으로 "비도덕 외 선박 보유" 누적 체크
                 for (const sid in portfolio) {
                     if (portfolio[sid] > 0 && !ships[sid].isUnethical && !ships[sid].isPirate) {
@@ -2664,6 +2714,9 @@
                 startVoyageResolution();
                 return;
             }
+
+            // 여기부터는 실제로 다음 라운드(또는 돌발 상황)로 "넘어가는" 것이 확정된 시점 — [대형 사고] 자동 발동 체크
+            triggerPendingDisaster();
 
             const nextRound = currentRound + 1;
 
@@ -3348,12 +3401,16 @@
 
             // Left Sidebar Card
             document.getElementById('stat-cash').textContent = Math.round(cash).toLocaleString();
+            const cashLgEl = document.getElementById('stat-cash-lg');
+            if (cashLgEl) cashLgEl.textContent = Math.round(cash).toLocaleString();
             
             let totalHoldingsVal = 0;
             for (const shipId in portfolio) {
                 totalHoldingsVal += portfolio[shipId] * calculateSharePrice(ships[shipId]);
             }
             document.getElementById('stat-shares-val').textContent = Math.round(totalHoldingsVal).toLocaleString();
+            const sharesLgEl = document.getElementById('stat-shares-val-lg');
+            if (sharesLgEl) sharesLgEl.textContent = Math.round(totalHoldingsVal).toLocaleString();
 
             const unethicalBadge = document.getElementById('stat-unethical-invest');
             unethicalBadge.textContent = `${Math.round(portfolio.E * calculateSharePrice(ships.E)).toLocaleString()} 레알`;
@@ -4644,7 +4701,7 @@
             { type:'small_gain',   label:'소확행',         desc:'자본 500 레알을 즉시 획득합니다.' },
             { type:'immunity',     label:'부정 조사 면제', desc:'이번 라운드에 비윤리 선박에 투자해도 도덕지수 패널티를 얻지 않습니다.' },
             { type:'insurance',    label:'보험',           desc:'투자했다가 침몰한 선박 1척에 사용하면 투자금의 50%를 돌려받습니다.' },
-            { type:'disaster',     label:'대형 사고',      desc:'⚠️ 불운! 뽑는 즉시 남은 선박 중 1척이 무조건 강제 침몰합니다.' },
+            { type:'disaster',     label:'대형 사고',      desc:'⚠️ 불운! 다음 라운드(혹은 돌발 상황)로 넘어가는 순간, 보유 중인 선박 한 척이 무작위로 강제 침몰합니다. 피할 수 없습니다.' },
         ];
 
         // 로컬 스토리지에서 부여된 레벨 로드 (하위호환용)
@@ -4962,8 +5019,10 @@
             // 사용된 효과는 회색 처리 대신 즉시 목록에서 제거 (라운드 내내 표시할 필요 없음)
             drawnEffects = drawnEffects.filter(e => !e._used);
             // market_fix/prophecy는 사용 후에도 라운드 내내 효력이 지속되므로 (목록에서는 사라져도) activeKeyEffect를 덮어쓰지 않음
+            // 단, 헤더 '사용하기'로 명시적으로 _activated된 경우만 유지 대상
             const keepActive = activeKeyEffect &&
                 (activeKeyEffect.type === 'market_fix' || activeKeyEffect.type === 'prophecy') &&
+                activeKeyEffect._activated &&
                 !activeKeyEffect._expired;
             if (drawnEffects.length === 0) {
                 area.style.display = 'none';
@@ -4987,9 +5046,9 @@
                     </button>
                 </div>`;
             }).join('');
-            // 하위호환 - activeKeyEffect도 첫 번째 미사용 효과로 동기화 (위에서 계산한 keepActive 재사용)
+            // 하위호환 - keepActive가 아니면 activeKeyEffect를 비움 (자동으로 새 효과를 끌어오지 않음 — 헤더 클릭이 유일한 활성화 경로)
             if (!keepActive) {
-                activeKeyEffect = drawnEffects.find(e => !e._used) || null;
+                activeKeyEffect = null;
             }
         }
 
@@ -5021,6 +5080,12 @@
         function activateDrawnEffect(idx) {
             const eff = drawnEffects[idx];
             if (!eff || eff._used) return;
+
+            // 대형 사고 — 플레이어가 직접 발동시킬 수 없음(자동 발동 대기 중), 안내만 표시
+            if (eff.type === 'disaster') {
+                showCustomAlert('🗝️ [대형 사고] ⚠️ 자동으로 발동되는 효과입니다. 다음 라운드(혹은 돌발 상황)로 넘어가는 순간 보유 선박 한 척이 무작위로 침몰합니다. 직접 사용할 수 없습니다.');
+                return;
+            }
 
             // 즉시 적용 효과들 (big_gain, small_gain) → 확인 없이 바로
             if (eff.type === 'big_gain') {
@@ -5098,7 +5163,7 @@
                     showCustomAlert('⚠️ [시세 조작] 출항 준비 단계에서는 모든 주가가 50레알 고정이라 사용할 수 없습니다. 1라운드 이후에 사용하세요!');
                     return;
                 }
-                // 선박 선택 모달 띄우기
+                // 선박 선택 모달 띄우기 (여기서 취소하면 아래 취소 버튼에서 _used를 되돌려 효과 소실을 방지함)
                 const modal2 = document.createElement('div');
                 modal2.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.78);display:flex;align-items:center;justify-content:center;padding:16px;';
                 const shipBtns = Object.keys(ships).filter(id => !ships[id]._ruined).map(id => `
@@ -5110,17 +5175,19 @@
                     <div style="font-size:28px;margin-bottom:6px;">⚙️</div>
                     <div style="font-weight:900;font-size:14px;color:#f59e0b;margin-bottom:12px;">시세 조작 — 선박 선택</div>
                     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">${shipBtns}</div>
-                    <button onclick="this.closest('[style*=fixed]').remove()" style="background:rgba(60,50,40,0.8);color:#9e7a4a;border:1px solid rgba(100,80,60,0.4);border-radius:8px;padding:8px 20px;font-weight:700;font-size:12px;cursor:pointer;">취소</button>
+                    <button onclick="cancelManipulationSelect(${idx}, this)" style="background:rgba(60,50,40,0.8);color:#9e7a4a;border:1px solid rgba(100,80,60,0.4);border-radius:8px;padding:8px 20px;font-weight:700;font-size:12px;cursor:pointer;">취소</button>
                 </div>`;
                 document.body.appendChild(modal2);
                 return; // _used는 실제 선박 선택 후에 처리
             } else if (eff.type === 'market_fix') {
+                eff._activated = true;
                 activeKeyEffect = eff;
                 showCustomAlert(`🗝️ [시장 동결] 사용시 다음 라운드에 어떤 상황이 나와도 주가 변동이 없습니다.`);
             } else if (eff.type === 'manipulation') {
                 activeKeyEffect = eff;
                 showCustomAlert(`🗝️ [시세 조작] 사용시 특정 선박의 성공률을 30% 높일 수 있습니다. 성공률이 높아져 주가도 상승합니다. (시장 동결 효과를 무시합니다)`);
             } else if (eff.type === 'prophecy') {
+                eff._activated = true;
                 activeKeyEffect = eff;
                 renderForecastCards();
                 showCustomAlert(`🗝️ [예언서] 예측 카드를 클릭하여 사용하며, 사용시 다음 라운드에 반드시 예측한 상황이 전개됩니다. 단, 돌발 상황이 발생할 수는 있습니다.`);
@@ -5213,18 +5280,12 @@
             const effect = KEY_EFFECTS[Math.floor(Math.random() * KEY_EFFECTS.length)];
             playSound('golden_key');
 
-            // 대형 사고 — 즉시 발동 (투자 여부 무관, 남은 선박 중 무조건 1척 랜덤 침몰)
+            // 대형 사고 — 즉시 침몰시키지 않고 보관(다른 효과처럼 카드로 표시), 다음 라운드 또는 돌발 상황으로 "넘어가는" 시점에 자동 발동
             if (effect.type === 'disaster') {
-                const candidates = Object.keys(ships).filter(id => !ships[id]._ruined);
-                if (candidates.length > 0) {
-                    const target = candidates[Math.floor(Math.random() * candidates.length)];
-                    ships[target]._ruined = true;
-                    ships[target].currentProb = 0;
-                    updateUI();
-                    showCustomAlert(`🗝️ [대형 사고] ⚠️ ${ships[target].name}이(가) 즉시 침몰했습니다!`);
-                } else {
-                    showCustomAlert(`🗝️ [대형 사고] ⚠️ 사고가 발생했으나 침몰시킬 선박이 남아있지 않습니다!`);
-                }
+                const newEff = { ...effect, _used: false };
+                drawnEffects.push(newEff);
+                renderDrawnEffects();
+                showCustomAlert(`🗝️ [대형 사고] ⚠️ 불운이 닥쳤습니다! 다음 라운드(혹은 돌발 상황)로 넘어가는 순간, 보유 중인 선박 한 척이 무작위로 강제 침몰합니다.`);
                 return;
             }
             // 즉시 현금 효과 — 뽑자마자 바로 적용
@@ -5271,9 +5332,17 @@
             renderDrawnEffects();
         }
 
+        // 시세조작 선박 선택 모달에서 '취소' 클릭 시 — 효과를 소모하지 않고 되돌림 (아이템 소실 버그 수정)
+        function cancelManipulationSelect(idx, btn) {
+            btn.closest('[style*=fixed]').remove();
+            const eff = drawnEffects[idx];
+            if (eff) eff._used = false;
+            renderDrawnEffects();
+        }
+
         // 예언서 - 상황 카드 클릭 시 선택 확인창
         function selectProphecySituation(sitIndex) {
-            if (!activeKeyEffect || activeKeyEffect.type !== 'prophecy') return false;
+            if (!activeKeyEffect || activeKeyEffect.type !== 'prophecy' || !activeKeyEffect._activated) return false;
             const sit = situations[sitIndex];
             if (!sit) return false;
 
