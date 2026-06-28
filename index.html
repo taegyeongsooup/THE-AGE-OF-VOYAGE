@@ -718,7 +718,7 @@
             </div>
             
             <h2 class="header-title text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text mb-2 tracking-tight" style="background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                대항해 시대: 운명을 건 항해(3.04v)
+                대항해 시대: 운명을 건 항해(3.05v)
             </h2>
             <p class="text-slate-300 max-w-2xl text-sm sm:text-base mb-3 leading-relaxed px-4">
                 16세기, 유럽의 야심 찬 선장들이 미지의 신대륙과 인도를 향해 닻을 올립니다.<br>
@@ -2313,15 +2313,26 @@
 
                 titleEl.innerHTML = `<span class="text-amber-700 block text-sm font-black uppercase tracking-widest"><i class="fa-solid fa-newspaper"></i> 세계 정세 신문 기사</span>${sit.title}`;
 
-                // 정세 변화 적용 전 스냅샷 (영향 전후 비교로 쉬운 설명 자동 생성)
+                // 정세 변화 적용 전 스냅샷
                 const beforeSnapshot = JSON.parse(JSON.stringify(ships));
 
-                // 정세 변화 적용
-                sit.impact(ships);
+                // 시장 동결 효과 체크
+                const isMarketFrozen = drawnEffects.some(e => e.type === 'market_fix' && e._used && !e._expired)
+                    || (activeKeyEffect && activeKeyEffect.type === 'market_fix');
 
-                // 정세 변화 발생 시 메인 외 다른 7척 포함 모든 선박의 가치 동반 자동 변동
-                // 글로벌 변동 1회: 정세 관련 선박은 함수 내에서 자동 제외됨
-                applyGlobalMarketFluctuations(null, sitIndex);
+                if (!isMarketFrozen) {
+                    // 정세 변화 적용 (impact)
+                    sit.impact(ships);
+                    // 글로벌 변동
+                    applyGlobalMarketFluctuations(null, sitIndex);
+                } else {
+                    showCustomAlert('🗝️ [시장 동결] 이번 라운드 모든 주가 변동이 차단됩니다!');
+                    // 동결 효과 소모
+                    const frozenEff = drawnEffects.find(e => e.type === 'market_fix' && e._used && !e._expired);
+                    if (frozenEff) frozenEff._expired = true;
+                    if (activeKeyEffect && activeKeyEffect.type === 'market_fix') setActiveKeyEffect(null);
+                    renderDrawnEffects();
+                }
 
                 // 값 하한선 상한선 정렬
                 for (const shipId in ships) {
@@ -2541,11 +2552,6 @@
 
         // 신문 모달 닫기
         function closeNewspaperModal() {
-            // 시장 동결 1라운드 후 해제
-            if (activeKeyEffect && activeKeyEffect.type === 'market_fix') {
-                setActiveKeyEffect(null);
-                showCustomAlert('🗝️ 시장 동결 효과가 해제되었습니다.');
-            }
             const wasEventModal = pendingRoundAfterEvent !== null;
 
             document.getElementById('newspaper-modal').classList.add('hidden');
@@ -3783,6 +3789,31 @@
         // 명예의전당 tooltip - fixed position으로 잘림 없이 표시
         // 페이지 로드 시 저장된 음량 설정을 슬라이더 UI에 반영
         document.addEventListener('DOMContentLoaded', function() {
+            // 카카오톡 인앱 브라우저 감지 → 외부 브라우저 유도
+            const ua = navigator.userAgent || '';
+            const isKakao = /KAKAOTALK/i.test(ua);
+            const isLine  = /Line\//i.test(ua);
+            const isInApp = isKakao || isLine;
+            if (isInApp) {
+                const isIOS = /iPhone|iPad|iPod/i.test(ua);
+                const overlay = document.createElement('div');
+                overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(14,7,0,0.96);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;text-align:center;';
+                overlay.innerHTML = `
+                    <div style="font-size:48px;margin-bottom:16px;">🌐</div>
+                    <div style="font-weight:900;font-size:18px;color:#f59e0b;margin-bottom:12px;">외부 브라우저로 열어주세요</div>
+                    <div style="font-size:13px;color:#9e7a4a;line-height:1.9;margin-bottom:24px;">
+                        카카오톡 내부 브라우저에서는<br>
+                        <b style="color:#f87171;">음악, 음향 효과가 제대로 작동하지 않습니다.</b><br><br>
+                        ${isIOS
+                            ? `우측 하단 <b style="color:#f59e0b;">··· 더보기</b> 버튼 →<br><b style="color:#f59e0b;">Safari로 열기</b>를 눌러주세요.`
+                            : `우측 상단 <b style="color:#f59e0b;">⋮ 메뉴</b> 버튼 →<br><b style="color:#f59e0b;">다른 브라우저로 열기 / Chrome</b>을 눌러주세요.`
+                        }
+                    </div>
+                    <button onclick="this.parentElement.remove()" style="background:rgba(60,50,40,0.8);color:#9e7a4a;border:1px solid rgba(200,150,12,0.4);border-radius:10px;padding:10px 28px;font-weight:700;font-size:13px;cursor:pointer;">그래도 여기서 계속하기</button>
+                `;
+                document.body.appendChild(overlay);
+            }
+
             const bgmSlider = document.getElementById('bgm-slider');
             const sfxSlider = document.getElementById('sfx-slider');
             const bgmVal   = document.getElementById('bgm-val');
@@ -3792,7 +3823,7 @@
             if (bgmVal)    { bgmVal.textContent = Math.round(bgmVolume * 100) + '%'; }
             if (sfxVal)    { sfxVal.textContent = Math.round(sfxVolume * 100) + '%'; }
 
-            // 마지막 입력값 자동 복원 (반·이름만, 비밀번호는 복원 안 함)
+            // 마지막 입력값 자동 복원
             try {
                 const last = JSON.parse(localStorage.getItem('aov_last_player') || '{}');
                 if (last.cls)  document.getElementById('input-player-class').value = last.cls;
@@ -4256,6 +4287,20 @@
             btn.closest('[style*=fixed]').remove();
             const eff = drawnEffects[idx];
             if (!eff || eff._used) return;
+
+            // 시장동결/예언서는 라운드당 1개만 허용
+            if (eff.type === 'market_fix' || eff.type === 'prophecy') {
+                const conflict = drawnEffects.find(e =>
+                    e !== eff && !e._expired &&
+                    (e.type === 'market_fix' || e.type === 'prophecy') &&
+                    e._used
+                );
+                if (conflict) {
+                    showCustomAlert(`⚠️ [${conflict.label}]이 이미 활성화되어 있습니다. 시장동결/예언서는 한 라운드에 하나만 사용 가능합니다.`);
+                    return;
+                }
+            }
+
             eff._used = true;
             playSound('golden_key');
             if (eff.type === 'manipulation') {
@@ -4461,9 +4506,50 @@
         }
 
         function quitGame() {
-            if (confirm("정말 포기하시겠습니까?\n현재 게임 진행 상황이 모두 초기화됩니다.")) {
-                resetGame();
+            const modal = document.createElement('div');
+            modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.80);display:flex;align-items:center;justify-content:center;padding:16px;';
+            modal.innerHTML = `
+            <div style="background:linear-gradient(145deg,#1c0e02,#2c1a04);border:2px solid rgba(239,68,68,0.5);border-radius:16px;width:100%;max-width:360px;padding:24px;text-align:center;">
+                <div style="font-size:32px;margin-bottom:8px;">🏳️</div>
+                <div style="font-weight:900;font-size:16px;color:#f87171;margin-bottom:8px;">항해 포기</div>
+                <div style="font-size:12px;color:#9e7a4a;margin-bottom:6px;line-height:1.7;">
+                    게임을 포기하면 이번 항해 기록은 저장되지 않으며<br>
+                    <b style="color:#f87171;">누적 자산에서 500 레알이 차감</b>됩니다.<br>
+                    <span style="font-size:10px;opacity:0.7;">(황금열쇠 효과 재시기를 방지하기 위한 패널티)</span>
+                </div>
+                <div style="display:flex;gap:10px;justify-content:center;margin-top:16px;">
+                    <button onclick="confirmQuitGame(this)" style="background:linear-gradient(135deg,#7f1d1d,#dc2626);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-weight:900;font-size:13px;cursor:pointer;">포기하기 (-500레알)</button>
+                    <button onclick="this.closest('[style*=fixed]').remove()" style="background:rgba(60,50,40,0.8);color:#9e7a4a;border:1px solid rgba(100,80,60,0.4);border-radius:8px;padding:10px 20px;font-weight:700;font-size:13px;cursor:pointer;">계속하기</button>
+                </div>
+            </div>`;
+            document.body.appendChild(modal);
+        }
+
+        async function confirmQuitGame(btn) {
+            btn.closest('[style*=fixed]').remove();
+            // -500레알 패널티 시트 기록
+            if (SHEET_WEBHOOK_URL && playerName) {
+                try {
+                    const pwKey = `aov_pw_${playerClass}_${playerNumber}_${playerName}`;
+                    const pw = localStorage.getItem(pwKey) || '';
+                    await fetch(SHEET_WEBHOOK_URL, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({
+                            timestamp:    new Date().toISOString(),
+                            playerClass:  playerClass,
+                            playerNumber: playerNumber,
+                            playerName:   playerName,
+                            password:     pw,
+                            finalAssets:  -500,   // 패널티: 누적자산에서 차감
+                            grade:        'F',
+                            titles:       ['항해 포기']
+                        })
+                    });
+                } catch(e) {}
             }
+            resetGame();
         }
 
 
