@@ -79,6 +79,11 @@
         .pnl-profit { color: #f87171 !important; }
         .pnl-loss { color: #60a5fa !important; }
         .pnl-flat { color: #cbd5e1 !important; }
+        /* 모바일에서 1/2 1/3 버튼 세로 배치 */
+        @media (max-width: 768px) {
+            .qty-fraction-btns { flex-direction: column !important; }
+            .qty-fraction-btns button { flex: 1 !important; }
+        }
         /* Custom scrollbar */
         ::-webkit-scrollbar {
             width: 4px;
@@ -323,8 +328,54 @@
         /* 모바일/태블릿: 세로 스크롤 */
         @media (max-width: 1023px) {
             body, #scale-root { height: auto !important; overflow-y: auto !important; }
-            #screen-game { grid-template-columns: 1fr !important; gap: 12px; }
+            #screen-game { grid-template-columns: 1fr !important; gap: 8px !important; }
             main { overflow: visible !important; height: auto !important; }
+
+            /* 모바일: 왼쪽 패널 sticky 고정 */
+            #left-panel {
+                position: sticky !important;
+                top: 0 !important;
+                z-index: 40 !important;
+                background: #0e0700 !important;
+                padding: 8px 8px 4px !important;
+                gap: 6px !important;
+            }
+
+            /* 포트폴리오 + 투자현황 가로 배치 */
+            #mobile-top-row {
+                display: flex !important;
+                flex-direction: row !important;
+                gap: 6px !important;
+                overflow-x: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+            #mobile-top-row > * { flex: 0 0 auto; }
+
+            /* 포트폴리오 카드 컴팩트 */
+            #portfolio-card {
+                min-width: 200px !important;
+                max-width: 220px !important;
+                padding: 8px !important;
+            }
+            #portfolio-card h3 { font-size: 10px !important; margin-bottom: 6px !important; }
+            #portfolio-card .text-lg { font-size: 14px !important; }
+            #portfolio-card .text-xl { font-size: 14px !important; }
+            #stat-total-assets { font-size: 16px !important; }
+
+            /* 투자현황 컴팩트 */
+            #investment-card {
+                min-width: 200px !important;
+                max-width: 220px !important;
+                flex: 1 !important;
+                min-height: 0 !important;
+            }
+
+            /* 정세예측 + 신문 세로 */
+            #forecast-panel { padding: 8px !important; }
+            #forecast-cards-container { grid-template-columns: repeat(2,1fr) !important; gap: 6px !important; }
+
+            /* 선박 그리드 패딩 */
+            #ships-grid { padding-top: 8px !important; }
         }
 
         /* 선박 카드 모바일 */
@@ -725,7 +776,7 @@
             </div>
             
             <h2 class="header-title text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text mb-2 tracking-tight" style="background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                대항해 시대: 운명을 건 항해(3.11v)
+                대항해 시대: 운명을 건 항해(3.16v)
             </h2>
             <p class="text-slate-300 max-w-2xl text-sm sm:text-base mb-3 leading-relaxed px-4">
                 16세기, 유럽의 야심 찬 선장들이 미지의 신대륙과 인도를 향해 닻을 올립니다.<br>
@@ -794,9 +845,12 @@
             
             <!-- Left Side: Round Event Console & Market News -->
             <div class="lg:col-span-4 flex flex-col gap-2.5 justify-between shrink-0" style="overflow:visible;" id="left-panel">
+
+                <!-- 모바일: 포트폴리오 + 투자현황 가로 배치 -->
+                <div id="mobile-top-row" style="display:contents;">
                 
                 <!-- Financial Status Card -->
-                <div class="rounded-2xl p-3 shadow-xl relative overflow-hidden shrink-0" style="background:linear-gradient(145deg,#f5edd6,#ede0c0); border:1px solid rgba(139,90,43,0.40); color:#1a0f00;">
+                <div id="portfolio-card" class="rounded-2xl p-3 shadow-xl relative overflow-hidden shrink-0" style="background:linear-gradient(145deg,#f5edd6,#ede0c0); border:1px solid rgba(139,90,43,0.40); color:#1a0f00;">
                     <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl -mr-10 -mt-10"></div>
                     <h3 class="text-slate-400 text-[12px] uppercase tracking-wider mb-1.5 font-bold flex items-center gap-1.5">
                         <i class="fa-solid fa-wallet text-emerald-500"></i> 자산 포트폴리오
@@ -842,7 +896,7 @@
                 </div>
 
                 <!-- Live Investment Status table (실시간 요약 표: 선단명/투자상품/평단가/보유주수/평가금) -->
-                <div class="rounded-2xl p-2.5 shadow-xl flex flex-col min-h-0" style="flex:1.1; background:linear-gradient(145deg,#f5edd6,#ede0c0); border:1px solid rgba(139,90,43,0.40); color:#1a0f00;">
+                <div id="investment-card" class="rounded-2xl p-2.5 shadow-xl flex flex-col min-h-0" style="flex:1.1; background:linear-gradient(145deg,#f5edd6,#ede0c0); border:1px solid rgba(139,90,43,0.40); color:#1a0f00;">
                     <div class="flex items-center gap-1.5 shrink-0 mb-1.5">
                         <i class="fa-solid fa-receipt text-amber-500 text-[12px]"></i>
                         <span class="text-[12px] uppercase tracking-wider font-bold" style="color:#c9a96e;">내 투자 선박 실시간 현황</span>
@@ -866,7 +920,7 @@
                     </div>
                 </div>
 
-                <!-- Next Situation Forecast (다음 상황 예측 카드 4개) -->
+                </div><!-- /mobile-top-row -->
                 <div id="forecast-panel" class="rounded-2xl p-2.5 shadow-xl shrink-0" style="background:linear-gradient(145deg,rgba(28,12,2,0.93),rgba(40,22,4,0.90)); border:1px solid rgba(139,90,43,0.50); overflow:visible;" style="flex: 0.9; display:flex; flex-direction:column; min-height:0;">
                     <h3 class="text-amber-300 text-[12px] uppercase tracking-wider mb-1.5 font-bold flex items-center gap-1.5 shrink-0">
                         <i class="fa-solid fa-binoculars"></i> 다음 정세 예측 첩보
@@ -2844,29 +2898,29 @@
                             </div>
 
                             <!-- 수량 입력 + 매수/매도 -->
-                            <div class="flex items-center gap-1 mb-1 text-[11px]" style="${isOwned ? 'background:rgba(255,255,255,0.45);border-radius:6px;padding:2px 4px;' : ''}">
-                                <span class="text-slate-500 flex-shrink-0" style="color:#7a5c2e;">수량</span>
+                            <div class="flex items-stretch gap-1 mb-1 text-[11px]" style="${isOwned ? 'background:rgba(255,255,255,0.45);border-radius:6px;padding:2px 4px;' : ''}">
+                                <span class="text-slate-500 flex-shrink-0 self-center" style="color:#7a5c2e;">수량</span>
                                 <input type="number" id="qty-${shipId}" min="1" value="1"
-                                    style="width:52px;background:rgba(255,255,255,0.6);border:1px solid rgba(139,90,43,0.4);border-radius:6px;padding:2px 4px;text-align:center;font-weight:700;color:#1a0f00;font-size:11px;"
+                                    style="width:36px;min-width:0;background:rgba(255,255,255,0.6);border:1px solid rgba(139,90,43,0.4);border-radius:6px;padding:2px 2px;text-align:center;font-weight:700;color:#1a0f00;font-size:11px;"
                                     oninput="(function(el){ var v=parseInt(el.value); var cost=document.getElementById('cost-${shipId}'); if(v>=1){ cost.textContent=v*calculateSharePrice(ships['${shipId}'])+'레알'; } else { cost.textContent='-'; } })(this)"
                                     onblur="if(!this.value||parseInt(this.value)<1){this.value=1;}"
                                     inputmode="numeric" pattern="[0-9]*">
-                                <!-- 1/2, 1/3 세로 배치 -->
-                                <div style="display:flex;flex-direction:column;gap:2px;">
+                                <!-- 1/2, 1/3 세로 묶음 — 높이=최대버튼과 동일 -->
+                                <div class="qty-fraction-btns" style="display:flex;gap:2px;flex:1;">
                                     <button onclick="(function(){ const p=calculateSharePrice(ships['${shipId}']); const m=Math.max(1,Math.round(Math.floor(cash/p)/2)); document.getElementById('qty-${shipId}').value=m; document.getElementById('cost-${shipId}').textContent=m*p+'레알'; })()"
-                                        style="background:rgba(100,180,100,0.20);color:#166534;border:1px solid rgba(34,197,94,0.35);border-radius:4px;padding:1px 5px;font-size:8px;font-weight:700;cursor:pointer;line-height:1.4;">
+                                        style="flex:1;background:rgba(100,180,100,0.20);color:#166534;border:1px solid rgba(34,197,94,0.35);border-radius:4px;padding:0 3px;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap;">
                                         1/2
                                     </button>
                                     <button onclick="(function(){ const p=calculateSharePrice(ships['${shipId}']); const m=Math.max(1,Math.round(Math.floor(cash/p)/3)); document.getElementById('qty-${shipId}').value=m; document.getElementById('cost-${shipId}').textContent=m*p+'레알'; })()"
-                                        style="background:rgba(100,180,100,0.20);color:#166534;border:1px solid rgba(34,197,94,0.35);border-radius:4px;padding:1px 5px;font-size:8px;font-weight:700;cursor:pointer;line-height:1.4;">
+                                        style="flex:1;background:rgba(100,180,100,0.20);color:#166534;border:1px solid rgba(34,197,94,0.35);border-radius:4px;padding:0 3px;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap;">
                                         1/3
                                     </button>
                                 </div>
                                 <button onclick="(function(){ const p=calculateSharePrice(ships['${shipId}']); const m=Math.floor(cash/p); if(m>0){document.getElementById('qty-${shipId}').value=m; document.getElementById('cost-${shipId}').textContent=m*p+'레알';} else{showCustomAlert('현금이 부족합니다!');} })()"
-                                    style="background:rgba(200,150,12,0.20);color:#7c3a00;border:1px solid rgba(200,150,12,0.4);border-radius:6px;padding:2px 6px;font-size:10px;font-weight:700;cursor:pointer;">
+                                    style="flex:1;background:rgba(200,150,12,0.20);color:#7c3a00;border:1px solid rgba(200,150,12,0.4);border-radius:6px;padding:0 4px;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;">
                                     최대
                                 </button>
-                                <span id="cost-${shipId}" class="font-bold" style="color:#b45309;font-size:10px;">${calculateSharePrice(s)}레알</span>
+                                <span id="cost-${shipId}" class="font-bold self-center flex-shrink-0" style="color:#b45309;font-size:9px;">${calculateSharePrice(s)}레알</span>
                             </div>
                             <div class="flex gap-1 text-[13px]">
                                 <button onclick="buyShares('${shipId}', parseInt(document.getElementById('qty-${shipId}').value)||1)" style="background:linear-gradient(135deg,#7a4a1a,#a06820);color:#f5edd6;border:1px solid rgba(200,150,12,0.4);" class="flex-1 py-1.5 rounded-lg font-bold transition duration-150 flex items-center justify-center gap-0.5 active:scale-95 hover:brightness-110">
@@ -3301,29 +3355,6 @@
                     stats = JSON.parse(localStorage.getItem(statKey) || '{}');
                 } catch(e) {}
 
-                // 시트에서 최신 stats 가져와 병합 (다른 기기 플레이 반영)
-                if (SHEET_WEBHOOK_URL) {
-                    try {
-                        const res = await fetch(`${SHEET_WEBHOOK_URL}?action=mytitles&cls=${encodeURIComponent(playerClass)}&num=${encodeURIComponent(playerNumber)}&name=${encodeURIComponent(playerName)}`);
-                        const data = await res.json();
-                        const sheetPlayCount  = Number(data.playCount  || 0);
-                        const sheetAssetsSum  = Number(data.totalAssetsSum || 0);
-                        // 시트값이 더 크면 병합
-                        if (sheetPlayCount  > (stats.playCount  || 0)) stats.playCount  = sheetPlayCount;
-                        if (sheetAssetsSum  > (stats.totalAssetsSum || 0)) stats.totalAssetsSum = sheetAssetsSum;
-                        // 시트 칭호도 로컬에 병합
-                        const sheetTitles = Array.isArray(data.titles) ? data.titles.filter(Boolean) : [];
-                        const titleKey = `aov_titles_${playerClass}_${playerNumber}_${playerName}`;
-                        let localTitles = [];
-                        try { localTitles = JSON.parse(localStorage.getItem(titleKey) || '[]'); } catch(e) {}
-                        const localTitleNames = new Set(localTitles.map(t => t.title || t));
-                        sheetTitles.forEach(t => {
-                            if (t && !localTitleNames.has(t)) { localTitles.push({ title: t }); localTitleNames.add(t); }
-                        });
-                        localStorage.setItem(titleKey, JSON.stringify(localTitles));
-                    } catch(e) {}
-                }
-
                 // 이번 판 추가
                 stats.playCount = (stats.playCount || 0) + 1;
                 stats.totalAssetsSum = (stats.totalAssetsSum || 0) + finalAssets;
@@ -3335,8 +3366,10 @@
                     if (title && !myTitlesAll.includes(title)) myTitlesAll.push(title);
                 }); } catch(e){}
 
-                const lvNow = calcExpAndLevel(myTitlesAll, stats.playCount, stats.totalAssetsSum).level;
-                playerLevel = lvNow; // 캐시 업데이트
+                // 로그인 시 이미 hof 기반으로 playerLevel 계산됨 → 그대로 사용
+                // 이번 판 exp 추가분만 반영
+                const lvNow = Math.max(playerLevel, calcExpAndLevel(myTitlesAll, stats.playCount, stats.totalAssetsSum).level);
+                playerLevel = lvNow;
                 checkAndGrantKeys(lvNow);
 
                 // 결과 화면에 레벨 표시
