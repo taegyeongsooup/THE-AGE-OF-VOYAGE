@@ -36,11 +36,6 @@
             height: 100vh;
             overflow: hidden;
         }
-        
-        @media (max-width: 1023px) {
-            body { overflow-y: auto; height: auto; }
-            #scale-root { font-size: 13px; overflow-y: auto; height: auto !important; }
-        }
         .header-title {
             font-family: 'Cinzel', 'Noto Sans KR', serif;
         }
@@ -309,68 +304,8 @@
         /* 명예의전당 */
         #hall-of-fame-list .bg-slate-900\/60 { background: rgba(28,12,2,0.65) !important; }
 
-        /* ============ 강제 가로모드 (transform rotate) ============ */
-        /* 폰을 돌리지 않고 버튼으로 화면을 90도 회전 */
-        body.force-landscape #scale-root {
-            transform-origin: top left;
-            position: fixed !important;
-            top: 0; left: 0;
-        }
-
-        /* ============ 모바일 가로모드: JS 클래스 제어 방식 ============ */
-        /* .is-landscape 클래스를 JS가 body에 붙이면 PC 레이아웃 적용 */
-        @media (max-width: 1023px) {
-            body.is-landscape, body.is-landscape #scale-root {
-                height: 100vh !important;
-                overflow: hidden !important;
-            }
-            body.is-landscape #screen-game {
-                grid-template-columns: 4fr 8fr !important;
-                display: grid !important;
-                height: calc(100vh - 65px) !important;
-                overflow: hidden !important;
-            }
-            body.is-landscape #left-panel  { height: 100% !important; overflow-y: auto !important; }
-            body.is-landscape #right-panel { height: 100% !important; overflow: hidden !important; }
-            body.is-landscape #ships-grid {
-                grid-template-columns: repeat(4, 1fr) !important;
-                grid-template-rows: repeat(2, 1fr) !important;
-                height: 100% !important;
-            }
-            body.is-landscape #ships-grid > div { height: 100% !important; }
-            body.is-landscape #screen-game.pb-24 { padding-bottom: 0 !important; }
-
-            /* 세로모드: 기존 스크롤 레이아웃 */
-            body:not(.is-landscape), body:not(.is-landscape) #scale-root {
-                height: auto !important;
-                overflow-y: auto !important;
-            }
-            body:not(.is-landscape) #screen-game { grid-template-columns: 1fr !important; }
-        }
-
-        /* CSS orientation도 병행 적용 (일반 브라우저 대응) */
-        @media (max-width: 1023px) and (orientation: landscape) {
-            body, #scale-root { height: 100vh !important; overflow: hidden !important; }
-            #screen-game {
-                grid-template-columns: 4fr 8fr !important;
-                display: grid !important;
-                height: calc(100vh - 65px) !important;
-                overflow: hidden !important;
-            }
-            #left-panel { height: 100% !important; overflow-y: auto !important; }
-            #right-panel { height: 100% !important; overflow: hidden !important; }
-            #ships-grid {
-                grid-template-columns: repeat(4, 1fr) !important;
-                grid-template-rows: repeat(2, 1fr) !important;
-                height: 100% !important;
-            }
-            #ships-grid > div { height: 100% !important; }
-            #screen-game.pb-24 { padding-bottom: 0 !important; }
-        }
-        @media (max-width: 1023px) and (orientation: portrait) {
-            body, #scale-root { height: auto !important; overflow-y: auto !important; }
-            #screen-game { grid-template-columns: 1fr !important; }
-        }
+        /* ============ 모바일: transform scale로 처리하므로 CSS 레이아웃 간섭 제거 ============ */
+        /* PC(1024px+)에서만 고정 높이 레이아웃 적용 */
 
         /* 전체 앱 */
         #app-root {
@@ -829,7 +764,7 @@
             </div>
             
             <h2 class="header-title text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text mb-2 tracking-tight" style="background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
-                대항해 시대: 운명을 건 항해(3.33v)
+                대항해 시대: 운명을 건 항해(3.34v)
             </h2>
             <p class="text-slate-300 max-w-2xl text-sm sm:text-base mb-3 leading-relaxed px-4">
                 16세기, 유럽의 야심 찬 선장들이 미지의 신대륙과 인도를 향해 닻을 올립니다.<br>
@@ -5091,128 +5026,96 @@
         }
 
 
+
         // ============================================================
-        // 게임 화면 자동 축소 - #scale-root를 뷰포트에 맞게 scale
-        // body는 항상 뷰포트 100% / overflow hidden
-        // #scale-root만 1440x860 고정 후 scale
+        // 모바일 뷰포트 스케일 — PC 레이아웃을 화면 크기에 맞게 축소
+        // scale-root를 DESIGN_W x DESIGN_H 고정 사이즈로 간주하고
+        // 실제 뷰포트에 꽉 차도록 transform: scale() 적용
         // ============================================================
         const DESIGN_W = 1536;
         const DESIGN_H = 800;
 
-        // ============================================================
-        // 강제 가로모드 — transform rotate 방식 (카톡 인앱 100% 호환)
-        // 폰을 돌리지 않고 버튼 하나로 화면 전체를 90도 회전
-        // ============================================================
-        let _forcedLandscape = false;
-
-        function applyForcedLandscape() {
+        function applyGameScale() {
             const root = document.getElementById('scale-root');
             if (!root) return;
+
             const vw = window.innerWidth;
             const vh = window.innerHeight;
 
-            if (_forcedLandscape) {
-                // 세로 화면을 가로처럼: 90도 회전 + width/height swap
-                root.style.width  = vh + 'px';
-                root.style.height = vw + 'px';
-                root.style.transform = `rotate(90deg) translateY(-${vw}px)`;
-                root.style.transformOrigin = 'top left';
-                root.style.position = 'fixed';
-                root.style.top = '0';
-                root.style.left = '0';
-                root.style.overflowY = 'hidden';
-                document.body.style.overflow = 'hidden';
-                document.body.style.height = vh + 'px';
-                document.body.classList.add('is-landscape', 'force-landscape');
-                const lbl = document.getElementById('rotate-btn-label');
-                if (lbl) lbl.textContent = '세로모드';
-            } else {
-                // 원래대로 복원
-                root.style.width  = '';
-                root.style.height = '';
+            // PC(1024px 이상)는 스케일 불필요
+            if (vw >= 1024 && vh >= 600) {
                 root.style.transform = '';
                 root.style.transformOrigin = '';
+                root.style.width = '';
+                root.style.height = '';
                 root.style.position = '';
                 root.style.top = '';
                 root.style.left = '';
-                root.style.overflowY = '';
                 document.body.style.overflow = '';
+                document.body.style.width = '';
                 document.body.style.height = '';
-                document.body.classList.remove('is-landscape', 'force-landscape');
-                const lbl = document.getElementById('rotate-btn-label');
-                if (lbl) lbl.textContent = '가로모드';
+                updateRotateBtn(false);
+                return;
+            }
+
+            // 모바일: 버튼으로 가로/세로 전환
+            updateRotateBtn(true);
+
+            if (_forcedLandscape) {
+                // 가로모드: 화면을 90도 회전 후 DESIGN_W x DESIGN_H를 vh x vw에 맞춤
+                const scaleX = vh / DESIGN_W;
+                const scaleY = vw / DESIGN_H;
+                const scale  = Math.min(scaleX, scaleY);
+
+                root.style.width  = DESIGN_W + 'px';
+                root.style.height = DESIGN_H + 'px';
+                root.style.transform = `rotate(90deg) scale(${scale})`;
+                root.style.transformOrigin = 'top left';
+                root.style.position = 'fixed';
+                root.style.top  = ((vw - DESIGN_H * scale) / 2) + 'px';
+                root.style.left = ((vh - DESIGN_W * scale) / 2 + DESIGN_W * scale) + 'px';
+                document.body.style.overflow = 'hidden';
+                document.body.style.width  = vw + 'px';
+                document.body.style.height = vh + 'px';
+            } else {
+                // 세로모드: DESIGN_W를 vw에 맞춰 축소, 세로는 스크롤
+                const scale = vw / DESIGN_W;
+                root.style.width  = DESIGN_W + 'px';
+                root.style.height = '';
+                root.style.transform = `scale(${scale})`;
+                root.style.transformOrigin = 'top left';
+                root.style.position = 'relative';
+                root.style.top  = '';
+                root.style.left = '';
+                document.body.style.overflow = 'auto';
+                document.body.style.width  = vw + 'px';
+                // body 높이는 스케일된 콘텐츠 높이로 (스크롤 가능)
+                document.body.style.height = '';
             }
         }
+
+        let _forcedLandscape = false;
 
         function toggleForcedLandscape() {
             _forcedLandscape = !_forcedLandscape;
-            applyForcedLandscape();
+            const lbl = document.getElementById('rotate-btn-label');
+            if (lbl) lbl.textContent = _forcedLandscape ? '세로모드' : '가로모드';
+            applyGameScale();
         }
 
-        // 모바일 여부 판단해서 버튼 표시
-        function updateRotateBtn() {
+        function updateRotateBtn(show) {
             const btn = document.getElementById('rotate-btn');
             if (!btn) return;
-            // 터치 기기 + 폭 1023px 이하인 경우만 버튼 표시
-            const isMobileSize = window.innerWidth <= 1023 || window.innerHeight <= 1023;
-            const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
-            btn.style.display = (isMobileSize && isTouch) ? 'flex' : 'none';
-        }
-
-        // ============================================================
-        // 모바일 방향 감지 — JS 클래스 제어 방식
-        // 카톡 인앱 브라우저 대응: orientationchange + resize 이중 감지
-        // ============================================================
-        function applyOrientationClass() {
-            if (_forcedLandscape) return; // 강제 가로모드 중엔 자동 감지 스킵
-            const isMobile = window.innerWidth < 1024 || window.innerHeight < 1024;
-            if (!isMobile) {
-                document.body.classList.remove('is-landscape');
-                return;
+            if (show === undefined) {
+                const isTouch = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+                show = isTouch && (window.innerWidth < 1024 || window.innerHeight < 600);
             }
-            let isLandscape = window.innerWidth > window.innerHeight;
-            if (window.screen && window.screen.orientation && window.screen.orientation.type) {
-                isLandscape = window.screen.orientation.type.includes('landscape');
-            }
-            if (isLandscape) {
-                document.body.classList.add('is-landscape');
-            } else {
-                document.body.classList.remove('is-landscape');
-            }
-        }
-
-        function applyGameScale() {
-            applyOrientationClass();
-            updateRotateBtn();
-            if (_forcedLandscape) applyForcedLandscape(); // 리사이즈 시 재계산
+            btn.style.display = show ? 'flex' : 'none';
         }
 
         window.addEventListener('resize', function() {
-            applyOrientationClass();
-            updateRotateBtn();
-            if (_forcedLandscape) applyForcedLandscape();
-            setTimeout(function() {
-                applyOrientationClass();
-                if (_forcedLandscape) applyForcedLandscape();
-            }, 300);
+            applyGameScale();
         });
-
-        window.addEventListener('orientationchange', function() {
-            setTimeout(function() {
-                applyOrientationClass();
-                updateRotateBtn();
-                if (_forcedLandscape) applyForcedLandscape();
-            }, 400);
-        });
-
-        if (window.screen && window.screen.orientation) {
-            window.screen.orientation.addEventListener('change', function() {
-                setTimeout(function() {
-                    applyOrientationClass();
-                    if (_forcedLandscape) applyForcedLandscape();
-                }, 200);
-            });
-        }
 
         window.onload = function() {
             updateUI();
