@@ -62,6 +62,30 @@
         .header-title {
             font-family: 'Cinzel', 'Noto Sans KR', serif;
         }
+        /* 항해 경로 보기 / 수량 비율(1/2,1/3,최대) 버튼 — PC/모바일 공통으로 항상 작게 고정
+           (다른 반응형 min-height/font-size 규칙보다 항상 우선해야 하므로 !important로 강제) */
+        .route-view-btn {
+            min-height: 0 !important;
+            height: 18px !important;
+            line-height: 1.3 !important;
+            font-size: 10px !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+        }
+        .qty-ratio-btn {
+            min-height: 0 !important;
+            height: auto !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            line-height: 1.2 !important;
+            font-size: 8px !important;
+            padding: 3px 4px !important;
+        }
+        @media (max-width: 1023px) {
+            .route-view-btn { height: 16px !important; font-size: 9px !important; }
+            .qty-ratio-btn { font-size: 7px !important; padding: 2px 3px !important; }
+        }
         /* 투자 중인 선박 카드 - 테두리 황금 발광만 (배경은 인라인으로 처리) */
         @keyframes owned-glow {
             0%, 100% { box-shadow: 0 0 5px 1px rgba(234,179,8,0.65); }
@@ -101,10 +125,12 @@
         @media (max-width: 768px) {
             .cost-display { font-size: 8px !important; }
             .cost-display .unit { display: none; }
-            /* 수량 버튼 세로 크기 최소화 */
-            .ship-card .flex.items-center.gap-1.mb-1 button { padding-top: 0 !important; padding-bottom: 0 !important; line-height: 1.6 !important; font-size: 8px !important; }
             .ship-card .flex.items-center.gap-1.mb-1 { margin-bottom: 3px !important; }
-            .ship-card .flex.gap-1.text-\[13px\] button { padding-top: 4px !important; padding-bottom: 4px !important; font-size: 10px !important; }
+            /* 매수/매도/전액매도 버튼: 모바일에서 세로 길이를 키워 탭하기 쉽게 */
+            .trade-btn-row { gap: 3px !important; }
+            .trade-btn { padding-top: 7px !important; padding-bottom: 7px !important; font-size: 10px !important; }
+            /* 전액매도 / 출항 버튼 한 줄 유지 — 모바일 폭에서 글자가 잘리지 않게 축소 */
+            #next-action-area button { font-size: 10px !important; padding-left: 6px !important; padding-right: 6px !important; }
             /* 칭호 컬렉션 / 투자자 컬렉션 버튼: 아이콘 위, 글자 아래로 세로 배치하고 글자는 무조건 한 줄 유지 */
             .collection-btn {
                 flex-direction: column !important;
@@ -495,9 +521,9 @@
             .ship-card input[type=number] { padding-top: 1px !important; padding-bottom: 1px !important; }
         }
 
-        /* 버튼 터치 영역 */
+        /* 버튼 터치 영역 (단, 항해경로 보기/수량비율 버튼은 작게 유지해야 하므로 제외) */
         @media (max-width: 1023px) {
-            .ship-card button { min-height: 32px; font-size: 11px; }
+            .ship-card button:not(.route-view-btn):not(.qty-ratio-btn) { min-height: 32px; font-size: 11px; }
         }
 
         /* 로비 화면 */
@@ -566,7 +592,7 @@
             /* 선박 카드 */
             .ship-card { padding: clamp(4px, 0.5vw, 8px) !important; }
             .ship-card h4 { font-size: clamp(10px, 0.9vw, 13px) !important; }
-            .ship-card button { font-size: clamp(9px, 0.8vw, 12px) !important; padding: clamp(2px, 0.3vw, 5px) clamp(2px, 0.4vw, 6px) !important; }
+            .ship-card button:not(.route-view-btn):not(.qty-ratio-btn) { font-size: clamp(9px, 0.8vw, 12px) !important; padding: clamp(2px, 0.3vw, 5px) clamp(2px, 0.4vw, 6px) !important; }
             .ship-card svg { height: clamp(28px, 3.5vw, 48px) !important; }
             /* 헤더 */
             .header-title { font-size: clamp(10px, 0.9vw, 14px) !important; }
@@ -722,8 +748,8 @@
         // ────────────────────────────────────────────────────
 
         let audioCtx = null;
-        let sfxVolume = parseFloat(localStorage.getItem('aov_sfxVolume') ?? 0.7);
-        let bgmVolume = parseFloat(localStorage.getItem('aov_bgmVolume') ?? 0.4);
+        let sfxVolume = parseFloat(localStorage.getItem('aov_sfxVolume') ?? 0.85);
+        let bgmVolume = parseFloat(localStorage.getItem('aov_bgmVolume') ?? 0.28);
         let bgmAudio = null;   // BGM Audio 객체
         let bgmStarted = false;
 
@@ -800,7 +826,9 @@
                     o.type = waveType || 'sine';
                     o.frequency.setValueAtTime(freq, now + startT);
                     o.connect(g); g.connect(audioCtx.destination);
-                    g.gain.setValueAtTime(gainVal * vol, now + startT);
+                    // 효과음 합성 음량이 배경음 대비 체감상 너무 작아, 전체 게인에 부스트 배율을 곱해 보정
+                    const SFX_BOOST = 2.2;
+                    g.gain.setValueAtTime(gainVal * vol * SFX_BOOST, now + startT);
                     g.gain.exponentialRampToValueAtTime(0.001, now + endT);
                     o.start(now + startT); o.stop(now + endT);
                 }
@@ -859,8 +887,10 @@
         <div class="w-full flex items-center gap-3 min-w-0">
             <!-- 타이틀 + 인적사항 (왼쪽 고정) -->
             <div class="flex items-center gap-2 shrink-0">
-                <div class="p-1.5 rounded-xl shadow-lg text-amber-200" style="background: linear-gradient(135deg, #8b4513, #c8960c); box-shadow: 0 4px 12px rgba(200,150,12,0.25);">
-                    <i class="fa-solid fa-ship text-base animate-pulse"></i>
+                <div class="p-1.5 rounded-xl shadow-lg text-amber-200 relative overflow-hidden" style="background: linear-gradient(135deg, #8b4513, #c8960c); box-shadow: 0 4px 12px rgba(200,150,12,0.25); width:30px; height:30px; display:flex; align-items:center; justify-content:center;">
+                    <!-- 헤더 로고 이미지 — 파일명: header_logo.png 를 index.html과 같은 폴더에 넣으면 자동으로 이 자리에 표시됨. 없으면 기본 배 아이콘이 표시됨. -->
+                    <img src="header_logo.png" alt="로고" style="width:100%; height:100%; object-fit:cover; border-radius:6px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                    <i class="fa-solid fa-ship text-base animate-pulse" style="display:none;"></i>
                 </div>
                 <div>
                     <h1 class="header-title text-sm font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400">
@@ -984,7 +1014,7 @@
                 Routes of Fortune
             </h2>
             <p class="text-sm sm:text-base font-semibold tracking-wide mb-1.5" style="color:#c8960c;">
-                시즌1: 운명을 건 항해 (3.55v)
+                시즌1: 운명을 건 항해 (3.56v)
             </p>
             <p class="text-slate-400 max-w-2xl text-[11px] sm:text-xs leading-relaxed px-4 mb-3">
                 16세기 미지의 항로를 개척하는 선장들에게 <strong class="text-amber-400">투자</strong>하여 부를 창조하고 명예를 드높이십시오!
@@ -1071,10 +1101,10 @@
 
             <div class="flex items-center justify-center gap-3">
                 <button onclick="returnToLobbyFromCharacterSelect()" class="px-6 py-3 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-xl font-bold text-base text-slate-300 active:scale-95 transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-arrow-left"></i> 돌아가기
+                    <i class="fa-solid fa-arrow-left"></i> 포기
                 </button>
                 <button onclick="confirmCharacterAndBeginVoyage()" class="px-8 py-3 bg-gradient-to-r from-amber-700 via-yellow-700 to-amber-600 rounded-xl font-bold text-base text-amber-100 shadow-xl shadow-amber-900/30 hover:scale-105 transition-all duration-300 active:scale-95 flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-ship"></i> 이 투자자로 자산 배분 시작
+                    <i class="fa-solid fa-ship"></i> 이 투자자로 시작
                 </button>
             </div>
         </section>
@@ -1221,12 +1251,12 @@
                     </div>
 
                     <!-- Next Round Action -->
-                    <div id="next-action-area" class="mt-2 pt-2 border-t border-slate-800/80 flex gap-2 flex-wrap sm:flex-nowrap">
-                        <button onclick="sellAllAssets()" class="w-1/3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-bold text-[12px] rounded-xl transition duration-150 active:scale-95">
+                    <div id="next-action-area" class="mt-2 pt-2 border-t border-slate-800/80 flex gap-2 flex-nowrap">
+                        <button onclick="sellAllAssets()" class="w-1/3 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 font-bold text-[12px] rounded-xl transition duration-150 active:scale-95 shrink-0 whitespace-nowrap">
                             전액 매도
                         </button>
-                        <button onclick="proceedNextRound()" id="btn-next-round" class="w-2/3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-[12px] rounded-xl transition duration-150 shadow-lg shadow-blue-500/10 active:scale-95 flex items-center justify-center gap-1">
-                            <span>1라운드 출항 및 첫 소식지 확인</span> <i class="fa-solid fa-angle-right text-[10px]"></i>
+                        <button onclick="proceedNextRound()" id="btn-next-round" class="w-2/3 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-[12px] rounded-xl transition duration-150 shadow-lg shadow-blue-500/10 active:scale-95 flex items-center justify-center gap-1 min-w-0">
+                            <span class="truncate">1라운드 출항 및 첫 소식지 확인</span> <i class="fa-solid fa-angle-right text-[10px] shrink-0"></i>
                         </button>
                     </div>
                 </div>
@@ -2735,7 +2765,7 @@
             showGameConfirm(
                 `'${charName}'(으)로 항해를 떠나시겠습니까?`,
                 function() { _executeBeginVoyage(); },
-                { icon: '⚓', title: '항해 출항 확인', confirmLabel: '출항하기', cancelLabel: '돌아가기' }
+                { icon: '⚓', title: '투자 준비 확인', confirmLabel: '투자 시작하기', cancelLabel: '돌아가기' }
             );
         }
 
@@ -2746,6 +2776,7 @@
             selectedCharacterId = null;
             const detailEl = document.getElementById('character-select-detail');
             if (detailEl) detailEl.style.display = 'none';
+            hideCharacterTooltip();
             applyGameScale();
         }
 
@@ -2755,6 +2786,7 @@
             document.getElementById('screen-character-select').classList.add('hidden');
             document.getElementById('screen-game').classList.remove('hidden');
             document.getElementById('main-header').style.display = 'flex';
+            hideCharacterTooltip();
             applyGameScale(); // 게임 화면 진입: 가로모드 버튼 표시
 
             // 새 게임 시작 시 활성 효과 초기화
@@ -2914,6 +2946,29 @@
             }, 3000);
         }
 
+        // 도덕 점수 실시간 변동 토스트 — 노예선/해적선 매수 시 헤더가 화면 밖으로 스크롤된 모바일에서도
+        // 변동량을 즉시 확인할 수 있도록 화면 하단에 짧게 떠 있다가 사라지는 전용 알림
+        let _ethicsToastEl = null;
+        let _ethicsToastTimer = null;
+        function showEthicsChangeToast(delta, newScore) {
+            if (!_ethicsToastEl) {
+                _ethicsToastEl = document.createElement('div');
+                _ethicsToastEl.style.cssText = 'position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:10002;border-radius:10px;padding:8px 16px;font-weight:800;font-size:12px;box-shadow:0 4px 18px rgba(0,0,0,0.5);pointer-events:none;transition:opacity 0.25s;white-space:nowrap;';
+                document.body.appendChild(_ethicsToastEl);
+            }
+            const isDrop = delta < 0;
+            _ethicsToastEl.style.background = isDrop ? 'rgba(120,15,15,0.95)' : 'rgba(15,90,40,0.95)';
+            _ethicsToastEl.style.color = isDrop ? '#fecaca' : '#bbf7d0';
+            _ethicsToastEl.style.border = isDrop ? '1px solid rgba(248,113,113,0.6)' : '1px solid rgba(74,222,128,0.6)';
+            _ethicsToastEl.textContent = `⚖️ 도덕 점수 ${isDrop ? '' : '+'}${(Math.round(delta * 100) / 100)} → 현재 ${Math.round(newScore * 100) / 100}점`;
+            _ethicsToastEl.style.opacity = '1';
+            _ethicsToastEl.style.display = 'block';
+            if (_ethicsToastTimer) clearTimeout(_ethicsToastTimer);
+            _ethicsToastTimer = setTimeout(() => {
+                if (_ethicsToastEl) _ethicsToastEl.style.opacity = '0';
+            }, 1400);
+        }
+
         // ------------------------------------------------------------
         // 게임 스타일 확인 모달 (window.confirm() 대체용)
         // 브라우저 네이티브 confirm은 게임 톤과 어긋나므로, 라운드 전환처럼
@@ -2980,6 +3035,7 @@
             if (delta !== 0) {
                 ethicalScore -= delta;
                 _roundAppliedDeduct[shipId] = targetDeduct;
+                showEthicsChangeToast(-delta, ethicalScore);
             }
         }
 
@@ -3414,6 +3470,8 @@
             if (shouldTriggerEvent) {
                 triggeredEventRounds.push(nextRound);
                 pendingRoundAfterEvent = nextRound; // 돌발극 종료 후 이 라운드로 진입
+                // 캐릭터 효과: 돌발 상황으로 넘어가는 시점도 "라운드 전환"으로 간주 (알레한드로 이자 등)
+                applyCharacterEffect('roundAdvance', {});
                 // 예언서 효과가 있으면 보존 — 돌발 후 정규 라운드에서 적용됨
                 showNewspaperModal(false, true);
             } else {
@@ -3920,8 +3978,8 @@
                                 </div>
                             </div>
                             <!-- 경로 보기 버튼 -->
-                            <button onclick="showRouteModal('${shipId}')" class="w-full text-[10px] font-bold rounded-md py-0.5 mb-1 flex items-center justify-center gap-1 transition-all" style="background:rgba(44,26,4,0.13);border:1px solid rgba(139,90,43,0.30);color:#7a5c2e;" onmouseover="this.style.background='rgba(200,150,12,0.18)';this.style.color='#b45309';" onmouseout="this.style.background='rgba(44,26,4,0.13)';this.style.color='#7a5c2e';">
-                                <i class="fa-solid fa-map-location-dot"></i> 항해 경로 보기
+                            <button onclick="showRouteModal('${shipId}')" class="w-full text-[10px] font-bold rounded-md mb-1 flex items-center justify-center gap-1 transition-all route-view-btn" style="background:rgba(44,26,4,0.13);border:1px solid rgba(139,90,43,0.30);color:#7a5c2e;padding-top:1px;padding-bottom:1px;line-height:1.3;min-height:0;height:18px;" onmouseover="this.style.background='rgba(200,150,12,0.18)';this.style.color='#b45309';" onmouseout="this.style.background='rgba(44,26,4,0.13)';this.style.color='#7a5c2e';">
+                                <i class="fa-solid fa-map-location-dot text-[9px]"></i> 항해 경로 보기
                             </button>
 
                             <!-- Ship Core Metrics -->
@@ -3978,32 +4036,35 @@
                             <div class="flex items-center gap-1 mb-1 text-[11px]" style="${isOwned ? 'background:rgba(255,255,255,0.45);border-radius:6px;padding:2px 4px;' : ''}">
                                 <span class="text-slate-500 flex-shrink-0" style="color:#7a5c2e;">수량</span>
                                 <input type="number" id="qty-${shipId}" min="1" value="1"
-                                    style="width:40px;background:rgba(255,255,255,0.6);border:1px solid rgba(139,90,43,0.4);border-radius:6px;padding:2px 2px;text-align:center;font-weight:700;color:#1a0f00;font-size:11px;"
+                                    style="width:36px;background:rgba(255,255,255,0.6);border:1px solid rgba(139,90,43,0.4);border-radius:6px;padding:3px 2px;text-align:center;font-weight:700;color:#1a0f00;font-size:10px;"
                                     oninput="(function(el){ var v=parseInt(el.value); var cost=document.getElementById('cost-${shipId}'); if(v>=1){ cost.innerHTML=v*calculateSharePrice(ships['${shipId}'])+'<span class=unit>레알</span>'; } else { cost.innerHTML='-'; } })(this)"
                                     onblur="if(!this.value||parseInt(this.value)<1){this.value=1;}"
                                     inputmode="numeric" pattern="[0-9]*">
                                 <button onclick="(function(){ const p=calculateSharePrice(ships['${shipId}']); const m=Math.max(1,Math.round(Math.floor(cash/p)/2)); document.getElementById('qty-${shipId}').value=m; document.getElementById('cost-${shipId}').innerHTML=m*p+'<span class=unit>레알</span>'; })()"
-                                    style="background:rgba(100,180,100,0.20);color:#166534;border:1px solid rgba(34,197,94,0.35);border-radius:4px;padding:0px 4px;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap;line-height:1.8;">
+                                    class="qty-ratio-btn"
+                                    style="background:rgba(100,180,100,0.20);color:#166534;border:1px solid rgba(34,197,94,0.35);border-radius:4px;font-weight:700;cursor:pointer;white-space:nowrap;">
                                     1/2
                                 </button>
                                 <button onclick="(function(){ const p=calculateSharePrice(ships['${shipId}']); const m=Math.max(1,Math.round(Math.floor(cash/p)/3)); document.getElementById('qty-${shipId}').value=m; document.getElementById('cost-${shipId}').innerHTML=m*p+'<span class=unit>레알</span>'; })()"
-                                    style="background:rgba(100,180,100,0.20);color:#166534;border:1px solid rgba(34,197,94,0.35);border-radius:4px;padding:0px 4px;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap;line-height:1.8;">
+                                    class="qty-ratio-btn"
+                                    style="background:rgba(100,180,100,0.20);color:#166534;border:1px solid rgba(34,197,94,0.35);border-radius:4px;font-weight:700;cursor:pointer;white-space:nowrap;">
                                     1/3
                                 </button>
                                 <button onclick="(function(){ const p=calculateSharePrice(ships['${shipId}']); const m=Math.floor(cash/p); if(m>0){document.getElementById('qty-${shipId}').value=m; document.getElementById('cost-${shipId}').innerHTML=m*p+'<span class=unit>레알</span>';} else{showCustomAlert('현금이 부족합니다!');} })()"
-                                    style="background:rgba(200,150,12,0.20);color:#7c3a00;border:1px solid rgba(200,150,12,0.4);border-radius:4px;padding:0px 4px;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap;line-height:1.8;">
+                                    class="qty-ratio-btn"
+                                    style="background:rgba(200,150,12,0.20);color:#7c3a00;border:1px solid rgba(200,150,12,0.4);border-radius:4px;font-weight:700;cursor:pointer;white-space:nowrap;">
                                     최대
                                 </button>
                                 <span id="cost-${shipId}" class="font-bold cost-display" style="color:#b45309;font-size:9px;white-space:nowrap;">${calculateSharePrice(s)}<span class="unit">레알</span></span>
                             </div>
-                            <div class="flex gap-1 text-[13px]">
-                                <button onclick="buyShares('${shipId}', parseInt(document.getElementById('qty-${shipId}').value)||1)" style="background:linear-gradient(135deg,#7a4a1a,#a06820);color:#f5edd6;border:1px solid rgba(200,150,12,0.4);padding:3px 4px;line-height:1;min-height:0;" class="flex-1 rounded-lg font-bold transition duration-150 flex items-center justify-center gap-0.5 active:scale-95 hover:brightness-110">
+                            <div class="flex gap-1 text-[13px] trade-btn-row">
+                                <button onclick="buyShares('${shipId}', parseInt(document.getElementById('qty-${shipId}').value)||1)" class="flex-1 rounded-lg font-bold transition duration-150 flex items-center justify-center gap-0.5 active:scale-95 hover:brightness-110 trade-btn" style="background:linear-gradient(135deg,#7a4a1a,#a06820);color:#f5edd6;border:1px solid rgba(200,150,12,0.4);padding:3px 4px;line-height:1;min-height:0;">
                                     <i class="fa-solid fa-plus text-[9px]"></i> 매수
                                 </button>
-                                <button onclick="sellShares('${shipId}', parseInt(document.getElementById('qty-${shipId}').value)||1)" style="${!isOwned ? 'opacity:0.4;pointer-events:none;' : ''}background:${isOwned ? '#c9a96e' : 'rgba(44,26,4,0.25)'};color:#3d1a00;border:1px solid rgba(92,61,17,0.35);padding:3px 4px;line-height:1;min-height:0;" class="flex-1 rounded-lg font-bold transition duration-150 flex items-center justify-center gap-0.5 active:scale-95 hover:brightness-110" ${!isOwned ? 'disabled' : ''}>
+                                <button onclick="sellShares('${shipId}', parseInt(document.getElementById('qty-${shipId}').value)||1)" class="flex-1 rounded-lg font-bold transition duration-150 flex items-center justify-center gap-0.5 active:scale-95 hover:brightness-110 trade-btn" style="${!isOwned ? 'opacity:0.4;pointer-events:none;' : ''}background:${isOwned ? '#c9a96e' : 'rgba(44,26,4,0.25)'};color:#3d1a00;border:1px solid rgba(92,61,17,0.35);padding:3px 4px;line-height:1;min-height:0;" ${!isOwned ? 'disabled' : ''}>
                                     <i class="fa-solid fa-minus text-[9px]"></i> 매도
                                 </button>
-                                <button onclick="sellAllOfShip('${shipId}')" style="${!isOwned ? 'opacity:0.4;pointer-events:none;' : ''}background:#991b1b;color:#fff;border:1px solid #7f1d1d;padding:3px 4px;line-height:1;min-height:0;" class="rounded-lg text-[10px] font-bold transition duration-150 active:scale-95 hover:brightness-110" title="전액매도" ${!isOwned ? 'disabled' : ''}>
+                                <button onclick="sellAllOfShip('${shipId}')" class="rounded-lg text-[10px] font-bold transition duration-150 active:scale-95 hover:brightness-110 trade-btn" style="${!isOwned ? 'opacity:0.4;pointer-events:none;' : ''}background:#991b1b;color:#fff;border:1px solid #7f1d1d;padding:3px 4px;line-height:1;min-height:0;" title="전액매도" ${!isOwned ? 'disabled' : ''}>
                                     전액매도
                                 </button>
                             </div>
@@ -5382,6 +5443,7 @@
             document.getElementById('screen-voyage').classList.add('hidden');
             document.getElementById('screen-character-select').classList.add('hidden');
             document.getElementById('screen-lobby').classList.remove('hidden');
+            hideCharacterTooltip();
             document.getElementById('main-header').style.display = 'none';
             // 로비 복귀 시 가로모드 해제 + scale 초기화
             _forcedLandscape = false;
@@ -6009,7 +6071,7 @@
                 const shipBtns = Object.keys(ships).filter(id => !ships[id]._ruined).map(id => `
                     <button onclick="applyManipulationFromDrawn('${id}',${idx},this)"
                         style="background:rgba(200,150,12,0.15);border:1px solid rgba(200,150,12,0.4);border-radius:8px;padding:7px 12px;color:#e8d5a3;font-weight:700;font-size:12px;cursor:pointer;text-align:left;">
-                        ⚡ ${ships[id].name} (현재 ${ships[id].currentProb}% → ${Math.min(98,ships[id].currentProb+30)}%)
+                        ⚡ ${ships[id].name} [${ships[id].cargo}]${(portfolio[id] > 0) ? ' <span style="color:#4ade80;">(투자중)</span>' : ''} (현재 ${ships[id].currentProb}% → ${Math.min(98,ships[id].currentProb+30)}%)
                     </button>`).join('');
                 modal2.innerHTML = `<div style="background:linear-gradient(145deg,#1c0e02,#2c1a04);border:2px solid rgba(200,150,12,0.5);border-radius:16px;width:100%;max-width:360px;padding:24px;text-align:center;">
                     <div style="font-size:28px;margin-bottom:6px;">⚙️</div>
