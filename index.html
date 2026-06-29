@@ -105,6 +105,17 @@
             .ship-card .flex.items-center.gap-1.mb-1 button { padding-top: 0 !important; padding-bottom: 0 !important; line-height: 1.6 !important; font-size: 8px !important; }
             .ship-card .flex.items-center.gap-1.mb-1 { margin-bottom: 3px !important; }
             .ship-card .flex.gap-1.text-\[13px\] button { padding-top: 4px !important; padding-bottom: 4px !important; font-size: 10px !important; }
+            /* 칭호 컬렉션 / 투자자 컬렉션 버튼: 아이콘 위, 글자 아래로 세로 배치하고 글자는 무조건 한 줄 유지 */
+            .collection-btn {
+                flex-direction: column !important;
+                gap: 1px !important;
+                padding: 4px 6px !important;
+                line-height: 1.2 !important;
+            }
+            .collection-btn-label {
+                white-space: nowrap !important;
+                font-size: 9px !important;
+            }
         }
 
         /* Custom scrollbar */
@@ -1015,19 +1026,19 @@
                 </button>
             </div>
 
-            <!-- 칭호 수집 명예의 전당 (Top 10) -->
+            <!-- 칭호 수집 명예의 전당 -->
             <div class="w-full max-w-3xl mt-3 lg:mt-0 lg:max-w-none lg:w-full">
                 <div class="rounded-2xl p-4" style="background:linear-gradient(145deg,#f5edd6,#ede0c0); border:1px solid rgba(139,90,43,0.45); overflow:visible; position:relative;">
                     <div class="flex items-center justify-between mb-2.5">
                         <h3 class="font-bold text-sm flex items-center gap-2" style="color:#2c1a04;">
-                            <i class="fa-solid fa-trophy text-amber-400"></i> 명예의 전당 (TOP 10)
+                            <i class="fa-solid fa-trophy text-amber-400"></i> 명예의 전당
                         </h3>
                         <div class="flex items-center gap-2">
-                            <button onclick="showMyTitles()" class="text-[12px] text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 border border-amber-700/40 rounded-lg px-2 py-0.5">
-                                <i class="fa-solid fa-book-open"></i> 칭호 컬렉션
+                            <button onclick="showMyTitles()" class="text-[12px] text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 border border-amber-700/40 rounded-lg px-2 py-0.5 collection-btn">
+                                <i class="fa-solid fa-book-open"></i> <span class="collection-btn-label">칭호 컬렉션</span>
                             </button>
-                            <button onclick="showCharacterCollection()" class="text-[12px] text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 border border-amber-700/40 rounded-lg px-2 py-0.5">
-                                <i class="fa-solid fa-users"></i> 투자자 컬렉션
+                            <button onclick="showCharacterCollection()" class="text-[12px] text-amber-400 hover:text-amber-300 font-semibold flex items-center gap-1 border border-amber-700/40 rounded-lg px-2 py-0.5 collection-btn">
+                                <i class="fa-solid fa-users"></i> <span class="collection-btn-label">투자자 컬렉션</span>
                             </button>
                             <button onclick="loadHallOfFame()" class="text-slate-400 hover:text-amber-400 flex items-center justify-center" style="padding:4px 8px;" aria-label="명예의 전당 새로고침" title="새로고침">
                                 <i class="fa-solid fa-arrows-rotate" id="hof-refresh-icon" style="font-size:16px;"></i>
