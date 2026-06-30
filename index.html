@@ -889,7 +889,7 @@
             <div class="flex items-center gap-2 shrink-0">
                 <div class="p-1.5 rounded-xl shadow-lg text-amber-200 relative overflow-hidden" style="background: linear-gradient(135deg, #8b4513, #c8960c); box-shadow: 0 4px 12px rgba(200,150,12,0.25); width:30px; height:30px; display:flex; align-items:center; justify-content:center;">
                     <!-- 헤더 로고 이미지 — 파일명: header_logo.png 를 index.html과 같은 폴더에 넣으면 자동으로 이 자리에 표시됨. 없으면 기본 배 아이콘이 표시됨. -->
-                    <img src="header_logo.png" alt="로고" style="width:100%; height:100%; object-fit:cover; border-radius:6px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                    <img id="header-logo-img" src="header_logo.png" alt="로고" style="width:100%; height:100%; object-fit:cover; border-radius:6px;" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
                     <i class="fa-solid fa-ship text-base animate-pulse" style="display:none;"></i>
                 </div>
                 <div>
@@ -1001,7 +1001,7 @@
         <section id="screen-lobby" class="w-full max-w-4xl lg:max-w-6xl mx-auto flex flex-col items-center justify-center text-center overflow-y-auto" style="max-height:100vh; padding: 8px 0;">
             <div class="relative mb-2" style="width:96px; height:96px; display:flex; align-items:center; justify-content:center;">
                 <!-- 투명 배경 배 조타(ship's wheel) 사진 — 파일명: ship_wheel.png, 계속 회전 -->
-                <img src="ship_wheel.png" alt="배 조타" class="animate-spin-wheel"
+                <img id="ship-wheel-img" src="ship_wheel.png" alt="배 조타" class="animate-spin-wheel"
                     style="width:96px; height:96px; object-fit:contain;"
                     onerror="this.style.display='none'; document.getElementById('wheel-fallback').style.display='flex';">
                 <div id="wheel-fallback" class="relative animate-float" style="display:none; align-items:center; justify-content:center;">
@@ -1013,14 +1013,14 @@
             </div>
             
             <!-- 게임 타이틀 이미지 (별도 사진으로 교체 예정) — 파일명: game_title.png -->
-            <img src="game_title.png" alt="게임 타이틀"
+            <img id="game-title-img" src="game_title.png" alt="게임 타이틀"
                 style="max-width:520px; width:100%; height:auto; margin-bottom:6px;"
                 onerror="this.style.display='none'; document.getElementById('title-fallback-text').style.display='block';">
             <h2 id="title-fallback-text" class="header-title text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text mb-2 tracking-tight" style="display:none; background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
                 Routes of Fortune
             </h2>
             <p class="text-sm sm:text-base font-semibold tracking-wide mb-1.5" style="color:#c8960c;">
-                시즌1: 운명을 건 항해 (3.58v)
+                시즌1: 운명을 건 항해 (3.57v)
             </p>
             <p class="text-slate-400 max-w-2xl text-[11px] sm:text-xs leading-relaxed px-4 mb-3">
                 16세기 미지의 항로를 개척하는 선장들에게 <strong class="text-amber-400">투자</strong>하여 부를 창조하고 명예를 드높이십시오!
@@ -1527,6 +1527,20 @@
             A: 0, B: 0, C: 0, D: 0, E: 0, F: 0, G: 0, H: 0
         };
 
+        // ============================================================
+        // 이미지 캐시 버스팅용 전역 버전 번호
+        // ------------------------------------------------------------
+        // 사진 파일을 새로 교체했을 때 브라우저/카톡인앱브라우저/CDN 캐시 때문에
+        // 옛날 사진이 계속 보이는 문제를 막기 위함. 사진을 바꿀 때마다
+        // 이 숫자만 +1 올리면 모든 이미지 URL 끝에 ?v=숫자 가 붙어
+        // 브라우저가 "새 파일"로 인식해서 강제로 다시 받아온다.
+        // ============================================================
+        const IMG_VERSION = 2;
+        function imgV(path) {
+            if (!path) return path;
+            return path + (path.includes('?') ? '&' : '?') + 'v=' + IMG_VERSION;
+        }
+
         // 8 Ships Initial Configurations (Includes Captain and Cargo Img links placeholder)
         const baseShips = {
             A: { id: "A", name: "산타 마리아 호", captain: "디아스 선장", cargo: "후추", destination: "인도 코친", baseProb: 60, currentProb: 60, baseMult: 1.5, currentMult: 1.5, isUnethical: false, icon: "fa-seedling", bg: "from-emerald-950/50 to-emerald-900/10", border: "border-emerald-800/60", badgeColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", history: [50], captainImg: "captain_A.jpg", goodsImg: "goods_A.jpg", flagImg: "flag_A.png", routeImg: "route_A.jpg" },
@@ -1584,7 +1598,7 @@
             },
             {
                 id: 'gaspard', name: '가스파르', alias: '프랑스의 은행장',
-                desc: '시작 자금 +500 레알 / 도덕 점수 -2로 시작',
+                desc: '시작 자금 +500 레알 / 도덕 점수 -2으로 시작',
                 unlock: { type: 'totalCapital', amount: 100000 }
             },
             {
@@ -2703,7 +2717,7 @@
                 card.innerHTML = `
                     ${lockIcon}
                     <div style="width:clamp(36px,11vw,56px);height:clamp(36px,11vw,56px);border-radius:10px;overflow:hidden;border:1px solid rgba(139,90,43,0.3);background:rgba(0,0,0,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                        <img src="${unlocked ? ('char_' + character.id + '.jpg') : ('char_' + character.id + '_locked.jpg')}" alt="${character.name}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\\'fa-solid fa-user\\' style=\\'color:#7a5c2e;font-size:clamp(14px,4vw,20px);\\'></i>';">
+                        <img src="${imgV(unlocked ? ('char_' + character.id + '.jpg') : ('char_' + character.id + '_locked.jpg'))}" alt="${character.name}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\\'fa-solid fa-user\\' style=\\'color:#7a5c2e;font-size:clamp(14px,4vw,20px);\\'></i>';">
                     </div>
                     <span style="font-size:clamp(9px,2.6vw,12px);font-weight:800;color:${nameColor};text-align:center;line-height:1.2;word-break:keep-all;">${unlocked ? character.name : '???'}</span>
                 `;
@@ -2712,7 +2726,7 @@
                 card.addEventListener('mouseleave', hideCharacterTooltip);
                 card.addEventListener('click', () => {
                     if (!unlocked) {
-                        showCustomAlert(`🔒 아직 해금되지 않은 투자자입니다.`);
+                        showCustomAlert(`🔒 ${character.name}은(는) 아직 해금되지 않았습니다. 해금 조건: ${getCharacterUnlockHint(character)}`);
                         return;
                     }
                     selectedCharacterId = character.id;
@@ -2776,15 +2790,6 @@
         function hideCharacterTooltip() {
             if (_charTooltipEl) _charTooltipEl.style.display = 'none';
         }
-        // 모바일에서 캐릭터 카드 외 다른 영역을 터치하면 박제된 캐릭터 툴팁을 닫음
-        // (카드 자체를 터치한 경우는 mouseenter로 새 툴팁이 뜨므로 제외)
-        document.addEventListener('touchstart', function(e) {
-            if (_charTooltipEl && _charTooltipEl.style.display === 'block') {
-                const grid = document.getElementById('character-select-grid');
-                if (grid && grid.contains(e.target)) return; // 카드 위 터치는 무시
-                hideCharacterTooltip();
-            }
-        }, { passive: true });
 
         // 게임 화면 '내 정보' 패널의 투자자 초상화에 마우스를 올렸을 때 — 현재 선택된 투자자의 설명을 보여줌
         // (기존 캐릭터 선택/컬렉션 화면과 동일한 툴팁 엘리먼트를 재사용)
@@ -4026,7 +4031,7 @@
                             <div class="flex items-center gap-2 mb-1.5">
                                 <div class="w-8 h-8 rounded-lg border flex-shrink-0 overflow-hidden flex items-center justify-center" style="background:rgba(44,26,4,0.12); border-color:rgba(139,90,43,0.30); position:relative;">
                                     ${s.flagImg
-                                        ? `<img src="${s.flagImg}" alt="${s.name} 깃발" style="width:100%;height:100%;object-fit:contain;object-position:center;display:block;" onerror="this.style.display='none';">`
+                                        ? `<img src="${imgV(s.flagImg)}" alt="${s.name} 깃발" style="width:100%;height:100%;object-fit:contain;object-position:center;display:block;" onerror="this.style.display='none';">`
                                         : `<i class="fa-solid ${s.icon} text-blue-400 text-sm"></i>`
                                     }
                                 </div>
@@ -4043,7 +4048,7 @@
                             <div class="flex gap-2 justify-center bg-slate-950/40 py-1 px-2 rounded-lg items-center mb-1.5 shrink-0" style="${isOwned ? 'background:rgba(255,255,255,0.50) !important;' : ''}">
                                 <div class="flex items-center gap-1.5 flex-1 justify-center border-r border-slate-800/80">
                                     <div class="w-7 h-7 rounded-full border border-slate-700 bg-slate-900 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                                        <img data-role="captain-photo" data-ship="${shipId}" src="${s.captainImg || ''}" alt="선장 사진" class="w-full h-full object-cover" style="${s.captainImg ? '' : 'display:none;'}" onerror="this.style.display='none';" loading="lazy">
+                                        <img data-role="captain-photo" data-ship="${shipId}" src="${imgV(s.captainImg) || ''}" alt="선장 사진" class="w-full h-full object-cover" style="${s.captainImg ? '' : 'display:none;'}" onerror="this.style.display='none';" loading="lazy">
                                         ${s.captainImg ? '' : '<i class="fa-solid fa-user text-slate-600 text-[11px]"></i>'}
                                     </div>
                                     <div class="text-[11px] text-slate-400 leading-tight">
@@ -4053,7 +4058,7 @@
                                 </div>
                                 <div class="flex items-center gap-1.5 flex-1 justify-center">
                                     <div class="w-7 h-7 rounded-full border border-slate-700 bg-slate-900 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                                        <img data-role="goods-photo" data-ship="${shipId}" src="${s.goodsImg || ''}" alt="상품 사진" class="w-full h-full object-cover" style="${s.goodsImg ? '' : 'display:none;'}" onerror="this.style.display='none';">
+                                        <img data-role="goods-photo" data-ship="${shipId}" src="${imgV(s.goodsImg) || ''}" alt="상품 사진" class="w-full h-full object-cover" style="${s.goodsImg ? '' : 'display:none;'}" onerror="this.style.display='none';">
                                         ${s.goodsImg ? '' : '<i class="fa-solid fa-box text-slate-600 text-[11px]"></i>'}
                                     </div>
                                     <div class="text-[11px] text-slate-400 leading-tight">
@@ -4227,7 +4232,7 @@
                 const nameEl = document.getElementById('my-info-char-name');
                 if (avatarBox) {
                     if (character) {
-                        avatarBox.innerHTML = `<img src="char_${character.id}.jpg" alt="${character.name}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\\'fa-solid fa-user\\' style=\\'color:#7a5c2e;font-size:14px;\\'></i>';">`;
+                        avatarBox.innerHTML = `<img src="${imgV('char_' + character.id + '.jpg')}" alt="${character.name}" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display='none';this.parentElement.innerHTML='<i class=\\'fa-solid fa-user\\' style=\\'color:#7a5c2e;font-size:14px;\\'></i>';">`;
                     } else {
                         avatarBox.innerHTML = '<i class="fa-solid fa-user" style="color:#7a5c2e;font-size:14px;"></i>';
                     }
@@ -6588,6 +6593,13 @@
             document.getElementById('main-header').style.display = 'none';
             // 운영자(테스트) 모드 — URL에 ?admin=1 이 있으면 테스트 패널 노출
             initAdminMode();
+            // 정적 이미지(헤더 로고/조타휠/타이틀) 캐시 무효화 — IMG_VERSION 적용
+            ['header-logo-img', 'ship-wheel-img', 'game-title-img'].forEach(function(id) {
+                const el = document.getElementById(id);
+                if (el && el.getAttribute('src')) {
+                    el.setAttribute('src', imgV(el.getAttribute('src')));
+                }
+            });
         }
 
         // 투자 현황 탭 전환
@@ -6728,7 +6740,7 @@
             modal.id = 'route-modal';
             modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.82);display:flex;align-items:center;justify-content:center;padding:16px;';
 
-            const imgSrc = s.routeImg || '';
+            const imgSrc = imgV(s.routeImg) || '';
             modal.innerHTML =
               '<div style="background:linear-gradient(145deg,#2c1a04,#1a0f00);border:2px solid rgba(200,150,12,0.45);border-radius:16px;width:100%;max-width:560px;overflow:hidden;display:flex;flex-direction:column;">'
             + '<div style="padding:12px 16px;border-bottom:1px solid rgba(139,90,43,0.30);display:flex;align-items:center;justify-content:space-between;">'
@@ -6969,7 +6981,7 @@
                         : ('<b style="color:#cbb;">??? (미해금)</b><br>📋 해금 조건: ' + getCharacterUnlockHint(character).replace(/"/g, '&quot;'));
                     cardsHtml += '<div data-chint="' + hintText.replace(/"/g, '&quot;') + '" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px 6px;border-radius:10px;background:' + (unlocked ? 'rgba(200,150,12,0.12)' : 'rgba(0,0,0,0.15)') + ';opacity:' + (unlocked ? '1' : '0.45') + ';cursor:help;min-height:88px;box-sizing:border-box;">'
                         + '<div style="width:52px;height:52px;border-radius:10px;overflow:hidden;border:1px solid rgba(139,90,43,0.3);background:rgba(0,0,0,0.1);display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
-                        + '<img src="' + (unlocked ? ('char_' + character.id + '.jpg') : ('char_' + character.id + '_locked.jpg')) + '" alt="' + character.name + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<i class=\\\'fa-solid fa-' + (unlocked ? 'user' : 'lock') + '\\\' style=\\\'color:#7a5c2e;font-size:18px;\\\'></i>\';">'
+                        + '<img src="' + imgV(unlocked ? ('char_' + character.id + '.jpg') : ('char_' + character.id + '_locked.jpg')) + '" alt="' + character.name + '" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<i class=\\\'fa-solid fa-' + (unlocked ? 'user' : 'lock') + '\\\' style=\\\'color:#7a5c2e;font-size:18px;\\\'></i>\';">'
                         + '</div>'
                         + '<div style="text-align:center;width:100%;min-width:0;">'
                         + '<div style="font-size:12px;font-weight:800;color:' + (unlocked ? '#2c1a04' : '#9e9080') + ';white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (unlocked ? ('✅ ' + character.name) : '🔒 ???') + '</div>'
