@@ -749,9 +749,14 @@
 
         let audioCtx = null;
         let sfxVolume = parseFloat(localStorage.getItem('aov_sfxVolume') ?? 0.85);
-        let bgmVolume = parseFloat(localStorage.getItem('aov_bgmVolume') ?? 0.28);
+        let bgmVolume = parseFloat(localStorage.getItem('aov_bgmVolume') ?? 0.15);
         let bgmAudio = null;   // BGM Audio 객체
         let bgmStarted = false;
+
+        function getKSTTimestamp() {
+            const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+            return kst.toISOString().replace('Z', '+09:00');
+        }
 
         function saveVolumeSettings() {
             localStorage.setItem('aov_sfxVolume', sfxVolume);
@@ -827,7 +832,7 @@
                     o.frequency.setValueAtTime(freq, now + startT);
                     o.connect(g); g.connect(audioCtx.destination);
                     // 효과음 합성 음량이 배경음 대비 체감상 너무 작아, 전체 게인에 부스트 배율을 곱해 보정
-                    const SFX_BOOST = 2.2;
+                    const SFX_BOOST = 3.5;
                     g.gain.setValueAtTime(gainVal * vol * SFX_BOOST, now + startT);
                     g.gain.exponentialRampToValueAtTime(0.001, now + endT);
                     o.start(now + startT); o.stop(now + endT);
@@ -2723,7 +2728,7 @@
                 card.addEventListener('mouseleave', hideCharacterTooltip);
                 card.addEventListener('click', () => {
                     if (!unlocked) {
-                        showCustomAlert(`🔒 ${character.name}은(는) 아직 해금되지 않았습니다. 해금 조건: ${getCharacterUnlockHint(character)}`);
+                        showCustomAlert(`🔒 아직 해금되지 않은 투자자입니다.`);
                         return;
                     }
                     selectedCharacterId = character.id;
@@ -2787,6 +2792,15 @@
         function hideCharacterTooltip() {
             if (_charTooltipEl) _charTooltipEl.style.display = 'none';
         }
+        // 모바일에서 캐릭터 카드 외 다른 영역을 터치하면 박제된 캐릭터 툴팁을 닫음
+        // (카드 자체를 터치한 경우는 mouseenter로 새 툴팁이 뜨므로 제외)
+        document.addEventListener('touchstart', function(e) {
+            if (_charTooltipEl && _charTooltipEl.style.display === 'block') {
+                const grid = document.getElementById('character-select-grid');
+                if (grid && grid.contains(e.target)) return; // 카드 위 터치는 무시
+                hideCharacterTooltip();
+            }
+        }, { passive: true });
 
         // 게임 화면 '내 정보' 패널의 투자자 초상화에 마우스를 올렸을 때 — 현재 선택된 투자자의 설명을 보여줌
         // (기존 캐릭터 선택/컬렉션 화면과 동일한 툴팁 엘리먼트를 재사용)
@@ -5008,7 +5022,7 @@
                 ? [...new Set(data.titles)]
                 : (data.allTitles ? [...new Set(data.allTitles.split(' / ').map(s => s.trim()).filter(Boolean))] : [data.title]);
             const payload = {
-                timestamp: new Date().toISOString(),
+                timestamp: getKSTTimestamp(),
                 playerClass: data.playerClass,
                 playerNumber: data.playerNumber,
                 playerName: data.playerName,
@@ -6507,7 +6521,7 @@
                         mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                         body: JSON.stringify({
-                            timestamp:    new Date().toISOString(),
+                            timestamp:    getKSTTimestamp(),
                             playerClass:  playerClass,
                             playerNumber: playerNumber,
                             playerName:   playerName,
