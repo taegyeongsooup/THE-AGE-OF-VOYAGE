@@ -682,12 +682,19 @@
         /* PC 로비/캐릭터선택/유물선택: 전체 15% 축소 + 스크롤 없이 딱 맞게 */
         @media (min-width: 1024px) {
             body:not(.desktop-fixed-ratio) #scale-root {
-                zoom: 0.85;
+                zoom: 1;
+                width: 100vw !important;
                 height: auto !important;
                 min-height: 100vh;
                 overflow-y: auto !important;
             }
+            #screen-lobby,
+            #screen-character-select,
+            #screen-relic-select {
+                justify-content: center !important;
+            }
             main {
+                justify-content: center !important;
                 height: auto !important;
                 overflow: visible !important;
             }
@@ -720,6 +727,9 @@
                 grid-template-columns: repeat(6, 1fr) !important;
                 gap: 8px !important;
                 margin-bottom: 6px !important;
+                max-width: 60% !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
             }
             /* 카드 내부 패딩 직접 줄이기 */
             #character-select-grid > div {
@@ -727,12 +737,14 @@
             }
             /* 캐릭터 설명창 — 한 줄 높이로 제한 */
             #character-select-detail {
-                max-width: 100% !important;
+                max-width: 30% !important;
+                margin-left: auto !important;
+                margin-right: auto !important;
                 padding: 10px 16px !important;
                 margin-bottom: 6px !important;
             }
-            #screen-character-select h2 { font-size: 1.3rem !important; margin-bottom: 3px !important; }
-            #screen-character-select > p { margin-bottom: 6px !important; font-size: 0.75rem !important; }
+            #screen-character-select h2 { font-size: 23px !important; margin-bottom: 3px !important; }
+            #screen-character-select > p { margin-bottom: 6px !important; font-size: 15px !important; }
         }
 
         /* 결과 화면 */
@@ -1422,14 +1434,14 @@
             <h2 class="header-title text-2xl sm:text-3xl lg:text-4xl font-extrabold text-transparent bg-clip-text mb-1 tracking-tight" style="background-image: linear-gradient(to bottom, #f4edd8, #c8960c); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
                 유물 선택
             </h2>
-            <p id="relic-select-char-name" class="text-slate-400 text-[11px] sm:text-[14px] mb-3 sm:mb-5 px-4"></p>
+            <p id="relic-select-char-name" class="text-slate-400 text-[13px] sm:text-[16px] mb-3 sm:mb-5 px-4"></p>
 
             <!-- 항해 기금 표시 -->
             <div class="flex items-center gap-2 mb-3 sm:mb-5 px-3 sm:px-5 py-1.5 sm:py-2.5 rounded-xl" style="background:rgba(200,150,12,0.12);border:1px solid rgba(200,150,12,0.3);">
-                <i class="fa-solid fa-anchor text-amber-600" style="font-size:11px;"></i>
-                <span class="text-[11px] sm:text-[14px]" style="color:#9e7a4a;">항해 기금</span>
-                <span id="relic-select-fund-display" class="font-black text-[13px] sm:text-[18px]" style="color:#b45309;">—</span>
-                <span class="text-[10px] sm:text-[12px]" style="color:#7a5c2e;">레알</span>
+                <i class="fa-solid fa-anchor text-amber-600" style="font-size:13px;"></i>
+                <span class="text-[13px] sm:text-[16px]" style="color:#9e7a4a;">항해 기금</span>
+                <span id="relic-select-fund-display" class="font-black text-[15px] sm:text-[20px]" style="color:#b45309;">—</span>
+                <span class="text-[12px] sm:text-[14px]" style="color:#7a5c2e;">레알</span>
             </div>
 
             <!-- 유물 카드 — 모바일 3열, PC 3열 (크게) -->
@@ -1845,7 +1857,7 @@
         // 아래 URL을 본인의 Google Apps Script 웹앱 배포 URL로 교체하세요.
         // (Google Sheets > 확장 프로그램 > Apps Script 에서 webhook 코드를 배포한 뒤 "웹앱 URL"을 붙여넣으면
         //  게임 결과 제출 시 자동으로 칭호 기록이 시트에 누적되고, 로비 화면의 명예의 전당 TOP10도 이 URL에서 데이터를 읽어옵니다.)
-        const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxfW3OKt6x4Z0WRTyTePqtF4icBf8RnGMQthLhjWtgHsI1GbM8EZKXne7MSZHu2DiFk/exec"
+        const SHEET_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbwaFeMBRKwzukJytnfUvyaRm9OGMuGWVYOmDiskB_3E3dQMYSxITJuRzthpCDNhnhA/exec"
 
         // 항해 기금 (누적 자산을 소비하는 별도 화폐)
         let voyageFundCache = 0;       // 로컬 캐시 (서버에서 불러온 값)
@@ -3187,10 +3199,10 @@
                 const card = document.createElement('div');
                 card.className = 'rounded-xl border-2 cursor-pointer transition relative';
                 const isPC = window.innerWidth >= 1024;
-                const cardPad = isPC ? '4px 4px' : 'clamp(4px,2vw,10px) clamp(2px,1vw,6px)';
-                const imgSize = isPC ? '44px' : 'clamp(36px,11vw,56px)';
-                const fontSize = isPC ? '11px' : 'clamp(9px,2.6vw,12px)';
-                const cardGap = isPC ? '4px' : 'clamp(3px,1.2vw,6px)';
+                const cardPad = isPC ? '10px 8px' : 'clamp(4px,2vw,10px) clamp(2px,1vw,6px)';
+                const imgSize = isPC ? '64px' : 'clamp(36px,11vw,56px)';
+                const fontSize = isPC ? '14px' : 'clamp(9px,2.6vw,12px)';
+                const cardGap = isPC ? '6px' : 'clamp(3px,1.2vw,6px)';
                 card.style.cssText = cardStyle + `min-height:0;padding:${cardPad};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:${cardGap};`;
                 card.innerHTML = `
                     ${lockIcon}
@@ -3223,12 +3235,12 @@
             const isPC = window.innerWidth >= 1024;
             detail.style.display = 'block';
             if (isPC) {
-                detail.style.padding = '8px 16px';
+                detail.style.padding = '14px 20px';
                 detail.style.marginBottom = '6px';
             }
             detail.innerHTML = `
-                <div style="font-weight:900;font-size:${isPC ? '13px' : '15px'};color:#7c2d12;margin-bottom:2px;">${character.name} <span style="font-size:${isPC ? '10px' : '11px'};color:#7a5c2e;font-weight:600;">— ${character.alias}</span></div>
-                <div style="font-size:${isPC ? '11px' : '12px'};color:#3d1a04;line-height:1.5;">${character.desc}</div>
+                <div style="font-weight:900;font-size:${isPC ? '17px' : '15px'};color:#7c2d12;margin-bottom:2px;">${character.name} <span style="font-size:${isPC ? '13px' : '11px'};color:#7a5c2e;font-weight:600;">— ${character.alias}</span></div>
+                <div style="font-size:${isPC ? '14px' : '12px'};color:#3d1a04;line-height:1.5;">${character.desc}</div>
             `;
         }
 
@@ -6073,7 +6085,7 @@
         // 유물(RELIC) 데이터 — 브론즈(기본지급) → 실버 → 골드 → 프리즘 순
         // 코드: id = 등급접두+코드 (ex: 1nat, 2mik ...)
         // 이미지: {id}.png (없으면 icon 이모지로 폴백)
-        // 상점 해금 조건: 이전 등급 유물 1개 이상 보유 시 다음 등급 해금 가능
+        // 상점 해금 조건: 이전 등급 유물을 전부 보유해야 다음 등급 해금 가능
         // ================================================================
         const RELIC_DATA = [
             // ── 브론즈 (기본 지급, 4종) ────────────────────────────────
@@ -6197,15 +6209,18 @@
 
         // ── 항해기금: 서버에서 불러오기 ──────────────────────────────
         async function loadVoyageFund(cls, num, name) {
-            if (!SHEET_WEBHOOK_URL || !name) return;
+            if (!SHEET_WEBHOOK_URL || !name) return false;
             try {
-                const res = await fetch(`${SHEET_WEBHOOK_URL}?action=getFund&cls=${encodeURIComponent(cls)}&num=${encodeURIComponent(num)}&name=${encodeURIComponent(name)}`);
+                const res = await fetch(`${SHEET_WEBHOOK_URL}?action=getFund&cls=${encodeURIComponent(cls)}&num=${encodeURIComponent(num)}&name=${encodeURIComponent(name)}&t=${Date.now()}`);
                 const data = await res.json();
                 voyageFundCache = Number(data.fund || 0);
                 sessionFundBudget = voyageFundCache; // 세션 스냅샷 고정
                 updateVoyageFundDisplay();
+                return true;
             } catch(e) {
+                console.error('[loadVoyageFund] 실패:', e);
                 voyageFundCache = 0;
+                return false;
             }
         }
 
@@ -6774,10 +6789,12 @@
                         playCount: 0, totalAssetsSum: 0
                     };
                 }
-                const assets = Number(r.maxAssets || r.finalAssets || 0);
-                if (assets > studentMap[key].maxAssets) studentMap[key].maxAssets = assets;
-                studentMap[key].playCount += 1;
-                studentMap[key].totalAssetsSum += assets;
+                // v5부터 hof는 학생당 1행 요약 데이터를 주므로(누적/판수는 서버에서 이미 계산됨)
+                // 여기서 여러 행을 합산하지 않고 서버 값을 그대로 사용한다.
+                const maxAssets = Number(r.finalAssets || r.maxAssets || 0);
+                studentMap[key].maxAssets = maxAssets;
+                studentMap[key].playCount = Number(r.playCount || 0);
+                studentMap[key].totalAssetsSum = Number(r.totalAssetsSum || 0);
 
                 // 칭호 파싱 — 배열/단일문자열/슬래시구분/title1~N 전부 대응
                 let titles = [];
@@ -8560,19 +8577,15 @@
             const idx = RELIC_GRADE_ORDER.indexOf(grade);
             if (idx <= 0) return true; // bronze는 항상 해금
             const prevGrade = RELIC_GRADE_ORDER[idx - 1];
-            // 이전 등급 유물 중 하나라도 보유하면 해금 가능
-            return RELIC_DATA.some(r => r.grade === prevGrade && unlockedRelics.includes(r.id));
+            // 이전 등급 유물을 전부 보유해야 다음 등급 해금 가능
+            const prevGradeRelics = RELIC_DATA.filter(r => r.grade === prevGrade);
+            return prevGradeRelics.length > 0 && prevGradeRelics.every(r => unlockedRelics.includes(r.id));
         }
 
-        function showRelicShop() {
-            const existing = document.getElementById('relic-shop-modal');
-            if (existing) existing.remove();
-            const modal = document.createElement('div');
-            modal.id = 'relic-shop-modal';
-            modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:16px;';
-
+        // 상점 카드 목록 HTML을 생성하는 공통 함수 — showRelicShop과 갱신(renderShopRelicList) 양쪽에서 재사용
+        function _buildShopRelicListHTML() {
             const shopRelics = RELIC_DATA.filter(r => !r.default);
-            let listHTML = shopRelics.map(r => {
+            return shopRelics.map(r => {
                 const owned = unlockedRelics.includes(r.id);
                 const rs = RELIC_RARITY_STYLE[r.rarity];
                 const gradeUnlocked = isPrevGradeUnlocked(r.grade);
@@ -8591,7 +8604,7 @@
                                 <span style="font-size:11px;font-weight:800;color:#5c3d11;">${r.name}</span>
                             </div>
                             <div style="font-size:9px;color:#7a5c2e;line-height:1.4;margin-bottom:3px;">${r.shortDesc || r.desc}</div>
-                            <div style="font-size:8px;color:#9e7a4a;font-style:italic;">[${prevLabel}] 등급 유물 보유 후 구매 가능 · ${r.price.toLocaleString()} 레알</div>
+                            <div style="font-size:8px;color:#9e7a4a;font-style:italic;">[${prevLabel}] 등급 유물 전부 보유 후 구매 가능 · ${r.price.toLocaleString()} 레알</div>
                         </div>
                     </div>`;
                 }
@@ -8611,6 +8624,27 @@
                     }
                 </div>`;
             }).join('');
+        }
+
+        // ── 상점: 항해기금 새로고침 버튼 ──────────────────────────────
+        async function refreshShopVoyageFund(btnEl) {
+            const icon = btnEl ? btnEl.querySelector('i') : null;
+            if (icon) icon.classList.add('fa-spin');
+            const ok = await loadVoyageFund(playerClass, playerNumber, playerName);
+            const fundEl = document.getElementById('shop-fund-display');
+            if (fundEl) fundEl.textContent = Math.floor(voyageFundCache).toLocaleString();
+            const listEl = document.getElementById('shop-relic-list');
+            if (listEl) renderShopRelicList(listEl);
+            if (icon) icon.classList.remove('fa-spin');
+            if (!ok) showCustomAlert('⚠️ 항해기금을 불러오지 못했습니다. 잠시 후 다시 시도해주세요.');
+        }
+
+        function showRelicShop() {
+            const existing = document.getElementById('relic-shop-modal');
+            if (existing) existing.remove();
+            const modal = document.createElement('div');
+            modal.id = 'relic-shop-modal';
+            modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);display:flex;align-items:center;justify-content:center;padding:16px;';
 
             modal.innerHTML = `
             <div style="background:linear-gradient(145deg,#f5edd6,#ede0c0);border:2px solid rgba(139,90,43,0.5);border-radius:16px;width:100%;max-width:440px;max-height:82vh;overflow:hidden;display:flex;flex-direction:column;">
@@ -8618,12 +8652,13 @@
                     <span style="font-size:14px;font-weight:900;color:#3d1a00;"><i class="fa-solid fa-store" style="color:#15803d;margin-right:6px;"></i>유물 상점</span>
                     <div style="display:flex;align-items:center;gap:10px;">
                         <span style="font-size:12px;font-weight:900;color:#b45309;"><i class="fa-solid fa-anchor" style="font-size:10px;margin-right:3px;"></i><span id="shop-fund-display">${Math.floor(voyageFundCache).toLocaleString()}</span> 레알</span>
+                        <button id="shop-fund-refresh-btn" onclick="refreshShopVoyageFund(this)" style="font-size:12px;color:#b45309;background:none;border:none;cursor:pointer;line-height:1;" title="항해기금 새로고침"><i class="fa-solid fa-rotate"></i></button>
                         <button onclick="document.getElementById('relic-shop-modal').remove()" style="font-size:18px;color:#9e7a4a;background:none;border:none;cursor:pointer;line-height:1;">✕</button>
                     </div>
                 </div>
                 <div style="overflow-y:auto;padding:12px 16px 16px;">
                     <div style="font-size:10px;color:#9e7a4a;margin-bottom:10px;">⚗️ 낮은 등급부터 순서대로 해금할 수 있습니다. 항해 기금이 차감됩니다.</div>
-                    <div id="shop-relic-list" style="display:flex;flex-direction:column;gap:6px;">${listHTML}</div>
+                    <div id="shop-relic-list" style="display:flex;flex-direction:column;gap:6px;">${_buildShopRelicListHTML()}</div>
                 </div>
             </div>`;
             document.body.appendChild(modal);
@@ -8676,25 +8711,7 @@
         function renderShopRelicList(container) {
             if (!container) { container = document.getElementById('shop-relic-list'); }
             if (!container) return;
-            const shopRelics = RELIC_DATA.filter(r => !r.default);
-            container.innerHTML = shopRelics.map(r => {
-                const owned = unlockedRelics.includes(r.id);
-                const rs = RELIC_RARITY_STYLE[r.rarity];
-                return `<div style="background:${owned ? 'rgba(44,26,4,0.06)' : rs.bg};border:1px solid ${owned ? 'rgba(139,90,43,0.2)' : rs.border};border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;">
-                    <span style="font-size:22px;flex-shrink:0;">${r.icon}</span>
-                    <div style="flex:1;min-width:0;">
-                        <div style="display:flex;align-items:center;gap:4px;margin-bottom:2px;">
-                            <span style="font-size:9px;font-weight:700;color:${rs.color};">${rs.label}</span>
-                            <span style="font-size:11px;font-weight:800;color:#1a0f00;">${r.name}</span>
-                        </div>
-                        <div style="font-size:9px;color:#7a5c2e;">${r.desc}</div>
-                    </div>
-                    ${owned
-                        ? `<span style="font-size:10px;font-weight:700;color:#15803d;flex-shrink:0;">✅ 보유</span>`
-                        : `<button onclick="purchaseRelicFromShop('${r.id}')" style="flex-shrink:0;background:linear-gradient(135deg,#92400e,#b45309);color:#fcd34d;border:1px solid rgba(200,150,12,0.6);border-radius:8px;padding:5px 9px;font-weight:900;font-size:10px;cursor:pointer;">${r.price.toLocaleString()}레알</button>`
-                    }
-                </div>`;
-            }).join('');
+            container.innerHTML = _buildShopRelicListHTML();
         }
 
         // ── 유물 선택 화면 (독립 섹션 기반) ──────────────────────────
@@ -8760,8 +8777,8 @@
             const isMobileView = window.innerWidth < 640;
             const cardSize = isMobileView ? 36 : 64;
             const cardPad = isMobileView ? '12px 8px' : '24px 16px';
-            const nameSize = isMobileView ? '11px' : '16px';
-            const descSize = isMobileView ? '9px' : '12px';
+            const nameSize = isMobileView ? '11px' : '18px';
+            const descSize = isMobileView ? '9px' : '14px';
 
             grid.innerHTML = candidates.map(id => {
                 const r = RELIC_DATA.find(x => x.id === id);
@@ -8782,7 +8799,7 @@
                     onmouseover="this.style.transform='scale(1.03)';this.style.boxShadow='0 4px 20px ${rs.border}'"
                     onmouseout="this.style.transform='';this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'">
                     ${iconHTML}
-                    <div style="font-size:8px;font-weight:700;color:${rs.color};background:${rs.bg};border:1px solid ${rs.border};border-radius:4px;display:inline-block;padding:1px 5px;margin-bottom:3px;">${rs.label}</div>
+                    <div style="font-size:10px;font-weight:700;color:${rs.color};background:${rs.bg};border:1px solid ${rs.border};border-radius:4px;display:inline-block;padding:1px 5px;margin-bottom:3px;">${rs.label}</div>
                     <div style="font-size:${nameSize};font-weight:900;color:#1a0f00;margin-bottom:3px;">${r.name}</div>
                     <div style="font-size:${descSize};color:#7a5c2e;line-height:1.4;">${r.shortDesc || r.desc}</div>
                 </button>`;
